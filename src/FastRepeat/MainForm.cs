@@ -160,7 +160,7 @@ internal sealed class MainForm : Form
             Font      = FontSubtitle,
             ForeColor = TextPrimary,
             Dock      = DockStyle.Top,
-            Height    = 32,
+            Height    = 38,
             Padding   = new Padding(0, 4, 0, 4)
         };
 
@@ -222,7 +222,7 @@ internal sealed class MainForm : Form
             Font      = FontSubtitle,
             ForeColor = TextPrimary,
             Dock      = DockStyle.Top,
-            Height    = 32,
+            Height    = 38,
             Padding   = new Padding(0, 4, 0, 4)
         };
 
