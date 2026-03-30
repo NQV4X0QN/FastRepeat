@@ -33,14 +33,18 @@ internal sealed class RepeatEngine : IDisposable
     private void OnPressed(object? sender, KeyBinding e)
     {
         if (!IsEnabled) return;
-        if (!_settings.Bindings.Any(b => b.Id == e.Id)) return;
+
+        // Use the STORED binding (which carries the output configuration),
+        // not the raw event binding (which has no output fields set).
+        var stored = _settings.Bindings.FirstOrDefault(b => b.Id == e.Id);
+        if (stored == null) return;
 
         lock (_lock)
         {
-            if (_active.ContainsKey(e.Id)) return; // already repeating
+            if (_active.ContainsKey(stored.Id)) return; // already repeating
             var cts = new CancellationTokenSource();
-            _active[e.Id] = cts;
-            _ = RunRepeatAsync(e, cts.Token);
+            _active[stored.Id] = cts;
+            _ = RunRepeatAsync(stored, cts.Token);
         }
     }
 
