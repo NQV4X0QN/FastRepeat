@@ -1,0 +1,12 @@
+{
+  "$schema": "https://signpath.io/web/v1/sign-request/schema",
+  "artifactConfigurations": [
+    {
+      "name": "FastRepeat",
+      "signingPolicySlugs": ["release-signing"],
+      "fileArtifactConfiguration": {
+        "path": "FastRepeat.exe"
+      }
+    }
+  ]
+}
