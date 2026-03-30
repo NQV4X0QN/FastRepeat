@@ -6,6 +6,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.2.0] — 2026-03-30
+
+### Added
+- **Trigger → Output key mapping** — each binding now has a separate trigger key
+  (the key you hold) and an output key (the key that gets injected repeatedly).
+  When adding a binding, a two-step dialog first captures the trigger, then asks
+  whether to repeat the same key or pick a different output key.
+- The bindings list now shows two columns: **Hold (trigger)** and **Repeats (output)**.
+- This directly solves hardware macro buttons (e.g. Logitech DPI Shift → F13) that
+  generate a virtual key Windows apps ignore: assign F13 as the trigger and Numpad 1
+  (or any real game key) as the output.
+- Existing single-key bindings continue to work unchanged (output defaults to trigger).
+
+---
+
 ## [1.1.0] — 2026-03-30
 
 ### Added

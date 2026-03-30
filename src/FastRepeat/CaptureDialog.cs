@@ -12,12 +12,14 @@ internal sealed class CaptureDialog : Form
     private readonly HookManager _hooks;
     public KeyBinding? Captured { get; private set; }
 
-    public CaptureDialog(HookManager hooks)
+    public CaptureDialog(HookManager hooks,
+                         string title       = "Assign Key or Button",
+                         string instruction = "Press any key or mouse button.\n\nPress  Esc  to cancel.")
     {
         _hooks = hooks;
 
-        Text            = "Assign Key or Button";
-        Size            = new Size(340, 160);
+        Text            = title;
+        Size            = new System.Drawing.Size(360, 160);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox     = false;
         MinimizeBox     = false;
@@ -26,7 +28,7 @@ internal sealed class CaptureDialog : Form
 
         var label = new Label
         {
-            Text      = "Press any key or mouse button to assign it.\n\nPress  Esc  to cancel.",
+            Text      = instruction,
             Dock      = DockStyle.Fill,
             TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
             Font      = new System.Drawing.Font("Segoe UI", 10f)
@@ -40,13 +42,11 @@ internal sealed class CaptureDialog : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        // Arm the capture callback – fires once on the next key/mouse event
         _hooks.CaptureCallback = OnCapture;
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        // Disarm in case the user closed via the X button
         _hooks.CaptureCallback = null;
         base.OnFormClosing(e);
     }

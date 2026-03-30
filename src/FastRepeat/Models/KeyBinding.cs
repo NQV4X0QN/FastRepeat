@@ -6,13 +6,41 @@ public enum MouseBtn { Left, Right, Middle, X1, X2, TiltLeft, TiltRight }
 
 public class KeyBinding
 {
+    // ── Trigger: the physical key / button the user holds ────────────────────
     public bool     IsMouseButton  { get; set; }
-    public int      VirtualKeyCode { get; set; }  // Used when IsMouseButton = false
-    public MouseBtn MouseButton    { get; set; }  // Used when IsMouseButton = true
+    public int      VirtualKeyCode { get; set; }
+    public MouseBtn MouseButton    { get; set; }
 
-    /// <summary>Human-readable label shown in the UI.</summary>
-    public string DisplayName => IsMouseButton
-        ? MouseButton switch
+    // ── Output: the key / button that gets injected repeatedly ───────────────
+    // Null means "same as trigger" (simple self-repeat mode).
+    public bool?     OutputIsMouseButton  { get; set; }
+    public int?      OutputVirtualKeyCode { get; set; }
+    public MouseBtn? OutputMouseButton    { get; set; }
+
+    // ── Resolved output helpers ───────────────────────────────────────────────
+    public bool     ActualOutputIsMouseButton  => OutputIsMouseButton  ?? IsMouseButton;
+    public int      ActualOutputVirtualKeyCode => OutputVirtualKeyCode ?? VirtualKeyCode;
+    public MouseBtn ActualOutputMouseButton    => OutputMouseButton    ?? MouseButton;
+
+    /// <summary>True when the output key differs from the trigger.</summary>
+    public bool HasCustomOutput => OutputIsMouseButton.HasValue;
+
+    // ── Display names ─────────────────────────────────────────────────────────
+    public string TriggerDisplayName => FriendlyName(IsMouseButton, VirtualKeyCode, MouseButton);
+
+    public string OutputDisplayName  => HasCustomOutput
+        ? FriendlyName(ActualOutputIsMouseButton, ActualOutputVirtualKeyCode, ActualOutputMouseButton)
+        : TriggerDisplayName;
+
+    /// <summary>Backward-compatible alias used by older code paths.</summary>
+    public string DisplayName => TriggerDisplayName;
+
+    /// <summary>Stable identifier keyed on the trigger (one trigger per binding).</summary>
+    public string Id => IsMouseButton ? $"MOUSE_{MouseButton}" : $"KEY_{VirtualKeyCode}";
+
+    // ── Static helper ─────────────────────────────────────────────────────────
+    public static string FriendlyName(bool isMouse, int vk, MouseBtn btn) => isMouse
+        ? btn switch
         {
             MouseBtn.Left      => "Mouse — Left Button",
             MouseBtn.Right     => "Mouse — Right Button",
@@ -23,8 +51,5 @@ public class KeyBinding
             MouseBtn.TiltRight => "Mouse — Scroll Tilt Right",
             _                  => "Mouse — Unknown"
         }
-        : ((Keys)VirtualKeyCode).ToString();
-
-    /// <summary>Stable identifier used as dictionary key.</summary>
-    public string Id => IsMouseButton ? $"MOUSE_{MouseButton}" : $"KEY_{VirtualKeyCode}";
+        : ((Keys)vk).ToString();
 }

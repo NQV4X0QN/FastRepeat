@@ -98,7 +98,8 @@ internal sealed class MainForm : Form
             MultiSelect   = false,
             HeaderStyle   = ColumnHeaderStyle.Nonclickable
         };
-        _bindingsList.Columns.Add("Key / Button", -2, HorizontalAlignment.Left);
+        _bindingsList.Columns.Add("Hold (trigger)",   -2, HorizontalAlignment.Left);
+        _bindingsList.Columns.Add("Repeats (output)", -2, HorizontalAlignment.Left);
         _bindingsList.SelectedIndexChanged += (_, _) => UpdateRemoveButton();
 
         // Button row — WrapContents=false so text never folds onto a second line
@@ -230,18 +231,56 @@ internal sealed class MainForm : Form
 
     private void AddBinding(object? sender, EventArgs e)
     {
-        using var dlg = new CaptureDialog(_hooks);
-        if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Captured == null) return;
+        // ── Step 1: capture the trigger key (the one the user will hold) ───────
+        using var triggerDlg = new CaptureDialog(
+            _hooks,
+            title:       "Step 1 / 2 — Trigger Key",
+            instruction: "Press the key or button you will HOLD.\n\nPress  Esc  to cancel.");
 
-        var binding = dlg.Captured;
-        if (_settings.Bindings.Any(b => b.Id == binding.Id))
+        if (triggerDlg.ShowDialog(this) != DialogResult.OK || triggerDlg.Captured == null)
+            return;
+
+        var trigger = triggerDlg.Captured;
+
+        if (_settings.Bindings.Any(b => b.Id == trigger.Id))
         {
-            MessageBox.Show($"\"{binding.DisplayName}\" is already assigned.", "Already Assigned",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(
+                $"\"{trigger.TriggerDisplayName}\" is already assigned.",
+                "Already Assigned", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
-        _settings.Bindings.Add(binding);
+        // ── Step 2: same key or different output? ───────────────────────────────
+        var choice = MessageBox.Show(
+            $"Trigger captured:  {trigger.TriggerDisplayName}\n\n" +
+            "Should holding this key repeat itself,\nor a DIFFERENT key?\n\n" +
+            "     Yes  →  repeat the same key\n" +
+            "     No   →  pick a different output key",
+            "Step 2 / 2 — What to Repeat?",
+            MessageBoxButtons.YesNoCancel,
+            MessageBoxIcon.Question);
+
+        if (choice == DialogResult.Cancel) return;
+
+        KeyBinding? output = null;
+        if (choice == DialogResult.No)
+        {
+            using var outputDlg = new CaptureDialog(
+                _hooks,
+                title:       "Step 2 / 2 — Output Key",
+                instruction: "Press the key or button to REPEAT while holding the trigger.\n\nPress  Esc  to cancel.");
+
+            if (outputDlg.ShowDialog(this) != DialogResult.OK || outputDlg.Captured == null)
+                return;
+            output = outputDlg.Captured;
+        }
+
+        // Build the final binding
+        trigger.OutputIsMouseButton  = output?.IsMouseButton;
+        trigger.OutputVirtualKeyCode = output?.VirtualKeyCode;
+        trigger.OutputMouseButton    = output?.MouseButton;
+
+        _settings.Bindings.Add(trigger);
         Save();
         RefreshBindingsList();
         SettingsChanged?.Invoke(this, EventArgs.Empty);
@@ -308,9 +347,12 @@ internal sealed class MainForm : Form
         _bindingsList.Items.Clear();
         foreach (var b in _settings.Bindings)
         {
-            var item = new ListViewItem(b.DisplayName) { Tag = b.Id };
+            var item = new ListViewItem(b.TriggerDisplayName) { Tag = b.Id };
+            item.SubItems.Add(b.OutputDisplayName);
             _bindingsList.Items.Add(item);
         }
+        // Auto-size both columns to content
+        _bindingsList.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
         UpdateRemoveButton();
     }
 

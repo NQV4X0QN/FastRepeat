@@ -92,10 +92,11 @@ internal sealed class RepeatEngine : IDisposable
 
     private static void Send(KeyBinding binding)
     {
-        if (binding.IsMouseButton)
-            SendMouseClick(binding.MouseButton);
+        // Always inject the *output* key — may differ from the trigger
+        if (binding.ActualOutputIsMouseButton)
+            SendMouseClick(binding.ActualOutputMouseButton);
         else
-            SendKeyPress((ushort)binding.VirtualKeyCode);
+            SendKeyPress((ushort)binding.ActualOutputVirtualKeyCode);
     }
 
     private static void SendKeyPress(ushort vk)
