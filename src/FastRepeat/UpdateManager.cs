@@ -9,7 +9,7 @@ namespace FastRepeat;
 /// </summary>
 internal static class UpdateManager
 {
-    public const string CurrentVersion = "1.5.2";
+    public const string CurrentVersion = "1.5.3";
 
     private const string Owner     = "NQV4X0QN";
     private const string Repo      = "FastRepeat";
@@ -85,7 +85,7 @@ internal static class UpdateManager
     /// </summary>
     public static void ApplyUpdate(string currentExe, string newExe)
     {
-        // Always update the installed copy (in case user is somehow running from elsewhere)
+        // Always update the installed copy
         var targetExe = Program.InstalledExePath;
         var bat = Path.Combine(Path.GetTempPath(), "FastRepeat_update.bat");
 
@@ -104,6 +104,10 @@ internal static class UpdateManager
             UseShellExecute = true
         });
 
-        Application.Exit();
+        // Force-exit the process. Application.Exit() alone is not enough because
+        // MainForm's FormClosing handler cancels the close and the TrayApp keeps
+        // the message loop alive. Environment.Exit guarantees process termination
+        // so the batch trampoline can replace the EXE.
+        Environment.Exit(0);
     }
 }

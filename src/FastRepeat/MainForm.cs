@@ -558,7 +558,27 @@ internal sealed class MainForm : Form
                         _updateBtn.BeginInvoke(() => _updateBtn.Text = $"⬇ Downloading {pct}%");
                 }));
 
-            UpdateManager.ApplyUpdate(exePath, tempPath);
+            _updateBtn.Text = "✓ Download complete";
+
+            var restart = MessageBox.Show(
+                $"Fast Repeat v{_pendingVersion} has been downloaded.\n\n" +
+                "The application will restart to apply the update.",
+                "Update Ready",
+                MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+
+            if (restart == DialogResult.OK)
+            {
+                UpdateManager.ApplyUpdate(exePath, tempPath);
+            }
+            else
+            {
+                // User cancelled — clean up temp file, reset button
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+                _pendingUpdateUrl = null;
+                _updateBtn.Text = "Check for Updates";
+                _updateBtn.Enabled = true;
+                return;
+            }
         }
         catch (Exception ex)
         {
