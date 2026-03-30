@@ -22,6 +22,7 @@ internal sealed class MainForm : Form
     private readonly ListView     _bindingsList;
     private readonly Button       _addBtn;
     private readonly Button       _removeBtn;
+    private readonly Button       _modeBtn;
     private readonly TrackBar     _speedSlider;
     private readonly NumericUpDown _speedNumeric;
     private readonly Button       _lockBtn;
@@ -99,8 +100,9 @@ internal sealed class MainForm : Form
             HeaderStyle   = ColumnHeaderStyle.Nonclickable
         };
         _bindingsList.Columns.Add("Hold (trigger)",   -2, HorizontalAlignment.Left);
-        _bindingsList.Columns.Add("Repeats (output)", -2, HorizontalAlignment.Left);
-        _bindingsList.SelectedIndexChanged += (_, _) => UpdateRemoveButton();
+        _bindingsList.Columns.Add("Sends (output)",   -2, HorizontalAlignment.Left);
+        _bindingsList.Columns.Add("Mode",             -2, HorizontalAlignment.Left);
+        _bindingsList.SelectedIndexChanged += (_, _) => UpdateSelectionButtons();
 
         // Button row — WrapContents=false so text never folds onto a second line
         var btnPanel = new FlowLayoutPanel
@@ -119,8 +121,13 @@ internal sealed class MainForm : Form
         _removeBtn.Click += RemoveBinding;
         _removeBtn.Enabled = false;
 
+        _modeBtn = MakeButton("Toggle Mode", autoSize: true);
+        _modeBtn.Click  += ToggleMode;
+        _modeBtn.Enabled = false;
+
         btnPanel.Controls.Add(_addBtn);
         btnPanel.Controls.Add(_removeBtn);
+        btnPanel.Controls.Add(_modeBtn);
 
         bindingsGroup.Controls.Add(_bindingsList);
         bindingsGroup.Controls.Add(btnPanel);
@@ -296,6 +303,24 @@ internal sealed class MainForm : Form
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    private void ToggleMode(object? sender, EventArgs e)
+    {
+        if (_bindingsList.SelectedItems.Count == 0) return;
+        var id      = (string)_bindingsList.SelectedItems[0].Tag!;
+        var binding = _settings.Bindings.FirstOrDefault(b => b.Id == id);
+        if (binding == null) return;
+
+        binding.Mode = binding.Mode == RepeatMode.Repeat
+            ? RepeatMode.SinglePress
+            : RepeatMode.Repeat;
+
+        Save();
+        RefreshBindingsList();
+        // Re-select the same row so the button text stays correct
+        foreach (ListViewItem item in _bindingsList.Items)
+            if ((string)item.Tag! == id) { item.Selected = true; break; }
+    }
+
     private void ClearAll(object? sender, EventArgs e)
     {
         if (_settings.Bindings.Count == 0) return;
@@ -349,11 +374,11 @@ internal sealed class MainForm : Form
         {
             var item = new ListViewItem(b.TriggerDisplayName) { Tag = b.Id };
             item.SubItems.Add(b.OutputDisplayName);
+            item.SubItems.Add(b.Mode == RepeatMode.SinglePress ? "Single Press" : "Repeat");
             _bindingsList.Items.Add(item);
         }
-        // Auto-size both columns to content
         _bindingsList.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
-        UpdateRemoveButton();
+        UpdateSelectionButtons();
     }
 
     private void RefreshSpeedControls()
@@ -382,8 +407,25 @@ internal sealed class MainForm : Form
         _headerPanel.BackColor = en ? Color.FromArgb(0, 120, 215) : Color.FromArgb(100, 100, 100);
     }
 
-    private void UpdateRemoveButton() =>
-        _removeBtn.Enabled = _bindingsList.SelectedItems.Count > 0;
+    private void UpdateSelectionButtons()
+    {
+        bool hasSelection = _bindingsList.SelectedItems.Count > 0;
+        _removeBtn.Enabled = hasSelection;
+        _modeBtn.Enabled   = hasSelection;
+
+        if (hasSelection)
+        {
+            var id      = (string)_bindingsList.SelectedItems[0].Tag!;
+            var binding = _settings.Bindings.FirstOrDefault(b => b.Id == id);
+            _modeBtn.Text = binding?.Mode == RepeatMode.SinglePress
+                ? "Set Repeat"
+                : "Set Single Press";
+        }
+        else
+        {
+            _modeBtn.Text = "Toggle Mode";
+        }
+    }
 
     private void Save() => _settings.Save();
 

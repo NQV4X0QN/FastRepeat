@@ -6,6 +6,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.3.0] — 2026-03-30
+
+### Added
+- **Single Press mode** — each binding can now be set to either *Repeat* (hold
+  trigger to spam output) or *Single Press* (fires output once per trigger press,
+  no repeat loop). Useful for toggle actions like Autorun that would stutter-step
+  if spammed.
+- **Mode column** in the bindings list shows "Repeat" or "Single Press" per row.
+- **Set Single Press / Set Repeat** button appears when a binding is selected,
+  toggling its mode immediately without re-adding the binding.
+
+---
+
 ## [1.2.0] — 2026-03-30
 
 ### Added

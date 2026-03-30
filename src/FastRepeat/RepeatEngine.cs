@@ -34,10 +34,17 @@ internal sealed class RepeatEngine : IDisposable
     {
         if (!IsEnabled) return;
 
-        // Use the STORED binding (which carries the output configuration),
+        // Use the STORED binding (which carries output config and mode),
         // not the raw event binding (which has no output fields set).
         var stored = _settings.Bindings.FirstOrDefault(b => b.Id == e.Id);
         if (stored == null) return;
+
+        // SinglePress: fire once immediately, no repeat loop
+        if (stored.Mode == RepeatMode.SinglePress)
+        {
+            Send(stored);
+            return;
+        }
 
         lock (_lock)
         {

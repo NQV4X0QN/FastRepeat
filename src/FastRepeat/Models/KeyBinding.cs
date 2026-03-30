@@ -2,7 +2,8 @@ using System.Windows.Forms;
 
 namespace FastRepeat.Models;
 
-public enum MouseBtn { Left, Right, Middle, X1, X2, TiltLeft, TiltRight }
+public enum MouseBtn   { Left, Right, Middle, X1, X2, TiltLeft, TiltRight }
+public enum RepeatMode { Repeat, SinglePress }
 
 public class KeyBinding
 {
@@ -21,6 +22,13 @@ public class KeyBinding
     public bool     ActualOutputIsMouseButton  => OutputIsMouseButton  ?? IsMouseButton;
     public int      ActualOutputVirtualKeyCode => OutputVirtualKeyCode ?? VirtualKeyCode;
     public MouseBtn ActualOutputMouseButton    => OutputMouseButton    ?? MouseButton;
+
+    // ── Behaviour mode ────────────────────────────────────────────────────────
+    /// <summary>
+    /// Repeat: inject output key repeatedly while trigger is held (default).<br/>
+    /// SinglePress: inject output key once on trigger press — no repeat loop.
+    /// </summary>
+    public RepeatMode Mode { get; set; } = RepeatMode.Repeat;
 
     /// <summary>True when the output key differs from the trigger.</summary>
     public bool HasCustomOutput => OutputIsMouseButton.HasValue;
