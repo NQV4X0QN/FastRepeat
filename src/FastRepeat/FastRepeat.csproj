@@ -9,11 +9,12 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <AssemblyName>FastRepeat</AssemblyName>
     <RootNamespace>FastRepeat</RootNamespace>
-    <Version>1.5.1</Version>
+    <Version>1.5.2</Version>
     <Authors>NQV4X0QN</Authors>
     <Description>System-wide key and mouse button repeater for Windows.</Description>
     <Copyright>Copyright © 2026</Copyright>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- Self-contained single-file release build -->

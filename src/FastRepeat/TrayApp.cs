@@ -24,6 +24,22 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ToolStripMenuItem _enableItem;
     private readonly ToolStripMenuItem _startupItem;
 
+    // Cached icons loaded from the embedded EXE resource
+    private static readonly Icon? _appIcon;
+    private static readonly Icon  _enabledIcon;
+    private static readonly Icon  _disabledIcon;
+
+    static TrayApp()
+    {
+        // Load the multi-size icon embedded in the EXE via ApplicationIcon
+        try { _appIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); }
+        catch { }
+
+        // Build enabled/disabled tray icons (16×16)
+        _enabledIcon  = BuildTrayIcon(enabled: true);
+        _disabledIcon = BuildTrayIcon(enabled: false);
+    }
+
     private MainForm? _form;
 
     public TrayApp()
@@ -113,12 +129,10 @@ internal sealed class TrayApp : ApplicationContext
 
     private void OnUninstall(object? sender, EventArgs e)
     {
-        // Hide tray, stop hooks, then launch the uninstaller
         _tray.Visible = false;
         _engine.Dispose();
         _hooks.Dispose();
 
-        // Relaunch self with --uninstall flag
         var exePath = Application.ExecutablePath;
         Process.Start(new ProcessStartInfo(exePath, "--uninstall")
         {
@@ -156,7 +170,7 @@ internal sealed class TrayApp : ApplicationContext
         bool en = _settings.IsEnabled;
         int  n  = _settings.Bindings.Count;
 
-        _tray.Icon = BuildIcon(en);
+        _tray.Icon = en ? _enabledIcon : _disabledIcon;
         _tray.Text = en
             ? $"Fast Repeat  •  {n} key{(n == 1 ? "" : "s")} active"
             : "Fast Repeat  •  Disabled";
@@ -172,38 +186,40 @@ internal sealed class TrayApp : ApplicationContext
         Application.Exit();
     }
 
-    // ── Icon generation ────────────────────────────────────────────────────
+    // ── Tray icon generation (16×16) ───────────────────────────────────────
 
-    private static Icon BuildIcon(bool enabled)
+    /// <summary>
+    /// Draws a 16×16 tray icon: blue rounded square with white "R".
+    /// Disabled state uses grey instead of blue.
+    /// </summary>
+    private static Icon BuildTrayIcon(bool enabled)
     {
         using var bmp = new Bitmap(16, 16, PixelFormat.Format32bppArgb);
         using var g   = Graphics.FromImage(bmp);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.SmoothingMode     = SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
         g.Clear(Color.Transparent);
 
         var bg = enabled ? Color.FromArgb(0, 95, 184) : Color.FromArgb(128, 128, 128);
-        var fg = Color.White;
 
         using var bgBrush = new SolidBrush(bg);
-        using var fgBrush = new SolidBrush(fg);
+        using var fgBrush = new SolidBrush(Color.White);
 
+        // Rounded rectangle
         using var path = new GraphicsPath();
-        path.AddArc(1, 1, 4, 4, 180, 90);
-        path.AddArc(11, 1, 4, 4, 270, 90);
-        path.AddArc(11, 11, 4, 4, 0, 90);
-        path.AddArc(1, 11, 4, 4, 90, 90);
+        path.AddArc(0, 0, 5, 5, 180, 90);
+        path.AddArc(11, 0, 5, 5, 270, 90);
+        path.AddArc(11, 11, 5, 5, 0, 90);
+        path.AddArc(0, 11, 5, 5, 90, 90);
         path.CloseFigure();
         g.FillPath(bgBrush, path);
 
+        // Centered "R"
         using var font = new Font("Segoe UI", 8f, FontStyle.Bold, GraphicsUnit.Point);
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-        g.DrawString("F", font, fgBrush, 2.5f, 1.5f);
-
-        if (enabled)
-        {
-            using var dotBrush = new SolidBrush(Color.FromArgb(15, 123, 15));
-            g.FillEllipse(dotBrush, 10, 10, 5, 5);
-        }
+        var textSize = g.MeasureString("R", font);
+        var x = (16 - textSize.Width)  / 2;
+        var y = (16 - textSize.Height) / 2;
+        g.DrawString("R", font, fgBrush, x, y);
 
         return Icon.FromHandle(bmp.GetHicon());
     }
