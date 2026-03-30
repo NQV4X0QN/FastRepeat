@@ -6,6 +6,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.1.0] — 2026-03-30
+
+### Added
+- **Scroll wheel tilt support** — Scroll Tilt Left and Scroll Tilt Right are now
+  assignable buttons, captured via `WM_MOUSEHWHEEL` in the low-level mouse hook.
+  Holding the scroll wheel tilted is detected via a 250 ms debounce timer: the first
+  tilt pulse fires "press", each subsequent pulse resets the deadline, and the timer
+  expiry fires "release" to stop repeating.
+- `MouseBtn.TiltLeft` / `MouseBtn.TiltRight` enum values and friendly display names
+  ("Mouse — Scroll Tilt Left / Right").
+- Synthetic tilt events use `MOUSEEVENTF_HWHEEL` with ±120 delta (one scroll notch
+  per repeat pulse), tagged with `FAST_REPEAT_MARKER` to prevent debounce re-entry.
+
+### Changed
+- Button 4 / 5 display names updated to "Back" / "Forward" for clarity.
+
+---
+
 ## [1.0.0] — 2026-03-29
 
 ### Added

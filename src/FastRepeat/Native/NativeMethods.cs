@@ -23,6 +23,7 @@ internal static class NativeMethods
     public const int WM_MBUTTONUP   = 0x0208;
     public const int WM_XBUTTONDOWN = 0x020B;
     public const int WM_XBUTTONUP   = 0x020C;
+    public const int WM_MOUSEHWHEEL = 0x020E;  // horizontal scroll / tilt
 
     public const uint XBUTTON1 = 0x0001;
     public const uint XBUTTON2 = 0x0002;
@@ -43,6 +44,7 @@ internal static class NativeMethods
     public const uint MOUSEEVENTF_MIDDLEUP   = 0x0040;
     public const uint MOUSEEVENTF_XDOWN      = 0x0080;
     public const uint MOUSEEVENTF_XUP        = 0x0100;
+    public const uint MOUSEEVENTF_HWHEEL     = 0x1000;  // horizontal scroll (tilt)
 
     /// <summary>
     /// Unique marker placed in dwExtraInfo for events we generate ourselves,

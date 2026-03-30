@@ -2,7 +2,7 @@ using System.Windows.Forms;
 
 namespace FastRepeat.Models;
 
-public enum MouseBtn { Left, Right, Middle, X1, X2 }
+public enum MouseBtn { Left, Right, Middle, X1, X2, TiltLeft, TiltRight }
 
 public class KeyBinding
 {
@@ -14,12 +14,14 @@ public class KeyBinding
     public string DisplayName => IsMouseButton
         ? MouseButton switch
         {
-            MouseBtn.Left   => "Mouse — Left Button",
-            MouseBtn.Right  => "Mouse — Right Button",
-            MouseBtn.Middle => "Mouse — Middle Button",
-            MouseBtn.X1     => "Mouse — Button 4 (X1)",
-            MouseBtn.X2     => "Mouse — Button 5 (X2)",
-            _               => $"Mouse — Unknown"
+            MouseBtn.Left      => "Mouse — Left Button",
+            MouseBtn.Right     => "Mouse — Right Button",
+            MouseBtn.Middle    => "Mouse — Middle Button",
+            MouseBtn.X1        => "Mouse — Button 4 (Back)",
+            MouseBtn.X2        => "Mouse — Button 5 (Forward)",
+            MouseBtn.TiltLeft  => "Mouse — Scroll Tilt Left",
+            MouseBtn.TiltRight => "Mouse — Scroll Tilt Right",
+            _                  => "Mouse — Unknown"
         }
         : ((Keys)VirtualKeyCode).ToString();
 

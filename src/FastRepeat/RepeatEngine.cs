@@ -116,6 +116,20 @@ internal sealed class RepeatEngine : IDisposable
 
     private static void SendMouseClick(MouseBtn btn)
     {
+        // Scroll tilt events are a single pulse, not a down+up pair
+        if (btn is MouseBtn.TiltLeft or MouseBtn.TiltRight)
+        {
+            // WHEEL_DELTA = 120; negative = left, positive = right
+            uint delta = btn == MouseBtn.TiltRight ? 120u : unchecked((uint)(int)-120);
+            var tiltInput = new NativeMethods.INPUT[1];
+            tiltInput[0].type            = NativeMethods.INPUT_MOUSE;
+            tiltInput[0].u.mi.dwFlags    = NativeMethods.MOUSEEVENTF_HWHEEL;
+            tiltInput[0].u.mi.mouseData  = delta;
+            tiltInput[0].u.mi.dwExtraInfo = NativeMethods.FAST_REPEAT_MARKER;
+            NativeMethods.SendInput(1, tiltInput, Marshal.SizeOf<NativeMethods.INPUT>());
+            return;
+        }
+
         (uint downFlag, uint upFlag, uint data) = btn switch
         {
             MouseBtn.Left   => (NativeMethods.MOUSEEVENTF_LEFTDOWN,   NativeMethods.MOUSEEVENTF_LEFTUP,   0u),
@@ -128,15 +142,15 @@ internal sealed class RepeatEngine : IDisposable
 
         var inputs = new NativeMethods.INPUT[2];
 
-        inputs[0].type              = NativeMethods.INPUT_MOUSE;
-        inputs[0].u.mi.dwFlags      = downFlag;
-        inputs[0].u.mi.mouseData    = data;
-        inputs[0].u.mi.dwExtraInfo  = NativeMethods.FAST_REPEAT_MARKER;
+        inputs[0].type             = NativeMethods.INPUT_MOUSE;
+        inputs[0].u.mi.dwFlags     = downFlag;
+        inputs[0].u.mi.mouseData   = data;
+        inputs[0].u.mi.dwExtraInfo = NativeMethods.FAST_REPEAT_MARKER;
 
-        inputs[1].type              = NativeMethods.INPUT_MOUSE;
-        inputs[1].u.mi.dwFlags      = upFlag;
-        inputs[1].u.mi.mouseData    = data;
-        inputs[1].u.mi.dwExtraInfo  = NativeMethods.FAST_REPEAT_MARKER;
+        inputs[1].type             = NativeMethods.INPUT_MOUSE;
+        inputs[1].u.mi.dwFlags     = upFlag;
+        inputs[1].u.mi.mouseData   = data;
+        inputs[1].u.mi.dwExtraInfo = NativeMethods.FAST_REPEAT_MARKER;
 
         NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeMethods.INPUT>());
     }
