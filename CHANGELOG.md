@@ -153,6 +153,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Self-contained single-file `.exe` build via GitHub Actions (no .NET runtime required).
 - MIT License.
 
+[1.5.5]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.5.5
 [1.5.4]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.5.4
 [1.5.3]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.5.3
 [1.5.2]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.5.2

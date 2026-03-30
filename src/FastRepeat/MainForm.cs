@@ -156,7 +156,7 @@ internal sealed class MainForm : Form
 
         var bindTitle = new Label
         {
-            Text      = "Assigned Keys & Mouse Buttons",
+            Text      = "Key Bindings",
             Font      = FontSubtitle,
             ForeColor = TextPrimary,
             Dock      = DockStyle.Top,

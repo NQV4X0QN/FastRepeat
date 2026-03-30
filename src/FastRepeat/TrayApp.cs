@@ -84,6 +84,14 @@ internal sealed class TrayApp : ApplicationContext
 
         UpdateTray();
         _hooks.Install();
+
+        // If relaunched after an update, auto-open the main window
+        // so the user sees the new version as visual confirmation.
+        var args = Environment.GetCommandLineArgs();
+        if (args.Any(a => a.Equals("--updated", StringComparison.OrdinalIgnoreCase)))
+        {
+            ShowForm();
+        }
     }
 
     // ── Show / hide window ─────────────────────────────────────────────────
@@ -183,7 +191,7 @@ internal sealed class TrayApp : ApplicationContext
         _tray.Visible = false;
         _engine.Dispose();
         _hooks.Dispose();
-        Application.Exit();
+        Environment.Exit(0);
     }
 
     // ── Tray icon generation (16×16) ───────────────────────────────────────

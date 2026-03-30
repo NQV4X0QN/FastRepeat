@@ -9,7 +9,7 @@ namespace FastRepeat;
 /// </summary>
 internal static class UpdateManager
 {
-    public const string CurrentVersion = "1.5.4";
+    public const string CurrentVersion = "1.5.5";
 
     private const string Owner     = "NQV4X0QN";
     private const string Repo      = "FastRepeat";
@@ -93,7 +93,7 @@ internal static class UpdateManager
             @echo off
             ping -n 3 127.0.0.1 > nul
             move /y "{newExe}" "{targetExe}"
-            start "" "{targetExe}"
+            start "" "{targetExe}" --updated
             del "%~f0"
             """);
 
