@@ -6,6 +6,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.4.0] — 2026-03-29
+
+### Added
+- **Auto-update** — "v1.3.0" button in the header checks GitHub Releases for a newer
+  version. First click queries the API and shows either "✓ Latest" (up-to-date) or
+  "↓ v1.4.0" (update available). Second click downloads the new EXE with live
+  progress ("↓ 47%"), then applies it via a batch-file trampoline in `%TEMP%` that
+  replaces the running EXE and restarts the app.
+- **Windows 11 UI redesign** — flat header strip (Accent blue) with status label and
+  action buttons; section panels with divider lines replacing GroupBox borders;
+  hover and press color effects on all buttons; Segoe UI Variable font with
+  Segoe UI fallback; DWM rounded corners on Windows 11 (build ≥ 22000).
+
+### Fixed
+- **Column headers always visible** — `AutoSizeColumns()` now takes the maximum of
+  content width and header text width so "Hold (trigger)", "Repeats (output)", and
+  "Mode" columns are never narrower than their heading.
+
+---
+
 ## [1.3.0] — 2026-03-30
 
 ### Added
@@ -66,4 +86,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Self-contained single-file `.exe` build via GitHub Actions (no .NET runtime required).
 - MIT License.
 
+[1.4.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.4.0
+[1.3.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.3.0
+[1.2.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.2.0
+[1.1.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.1.0
 [1.0.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.0.0

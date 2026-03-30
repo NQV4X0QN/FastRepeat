@@ -126,4 +126,13 @@ internal static class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    // ── DWM (Desktop Window Manager) ─────────────────────────────────────────
+    public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    public const int DWMWCP_ROUND                   = 2;
+    public const int DWMWA_BORDER_COLOR             = 34;
+    public const int DWMWA_CAPTION_COLOR            = 35;
+
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 }
