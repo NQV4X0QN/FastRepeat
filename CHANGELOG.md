@@ -6,6 +6,44 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.5.0] — 2026-03-30
+
+### Added
+- **Windows 11 Fluent Design overhaul** — complete visual refresh of the main window
+  using card-based layout with rounded corners (`RoundedPanel`), matching the WinUI 3
+  design language. Two distinct cards for "Assigned Keys" and "Repeat Speed" sections
+  provide clear visual hierarchy.
+- **Custom FluentButton control** — owner-drawn buttons with 4 px rounded corners,
+  accent/subtle variants, proper hover/press states, and a bottom-edge depth cue
+  matching the Windows 11 button style. Replaces all flat-style WinForms buttons.
+- **Prominent update section** — dedicated footer bar with version label and
+  "Check for Updates" button (replaces the small header version button). Shows
+  green "⬇ Download v{x.y.z}" when an update is available, live download progress,
+  and version transition text ("v1.4.0 → v1.5.0 available").
+- **DWM border color** — sets a subtle light border on the window frame via
+  `DWMWA_BORDER_COLOR` on Windows 11 builds.
+
+### Changed
+- **Window size increased** — default 540 × 510 → **640 × 660**, minimum
+  460 × 450 → **560 × 580**. Fixes buttons being clipped at the bottom of the
+  window on standard DPI displays.
+- **Header redesigned** — full-width accent-blue bar replaced with a clean
+  inline layout: green/grey status dot + "Fast Repeat" title (Segoe UI Variable
+  Display 13 pt bold) + accent Disable/Enable toggle button.
+- **Color palette refined** — accent blue updated to `#005FB8` (Windows 11
+  default), semantic green `#0F7B0F` for enabled state, semantic red `#C42B1C`
+  for locked-speed indicator.
+- **CaptureDialog modernized** — larger (420 × 200), background matches layer
+  color, content panel styled as a card, "Waiting for input…" hint added.
+- **Tray icon refined** — uses rounded rectangle background via GraphicsPath
+  with antialiasing, updated accent color, and consistent green status dot.
+
+### Fixed
+- **Version constant in sync** — `UpdateManager.CurrentVersion` now matches the
+  release tag (was stuck at 1.3.0 in the v1.4.0 release).
+
+---
+
 ## [1.4.0] — 2026-03-29
 
 ### Added
@@ -86,6 +124,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Self-contained single-file `.exe` build via GitHub Actions (no .NET runtime required).
 - MIT License.
 
+[1.5.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.5.0
 [1.4.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.4.0
 [1.3.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.3.0
 [1.2.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.2.0

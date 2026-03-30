@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
 using FastRepeat.Models;
@@ -117,25 +118,34 @@ internal sealed class TrayApp : ApplicationContext
     {
         using var bmp = new Bitmap(16, 16, PixelFormat.Format32bppArgb);
         using var g   = Graphics.FromImage(bmp);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
 
-        var bg  = enabled ? Color.FromArgb(0, 120, 215) : Color.FromArgb(110, 110, 110);
-        var fg  = Color.White;
+        // Windows 11 accent blue when enabled, muted grey when disabled
+        var bg = enabled ? Color.FromArgb(0, 95, 184) : Color.FromArgb(128, 128, 128);
+        var fg = Color.White;
 
         using var bgBrush = new SolidBrush(bg);
         using var fgBrush = new SolidBrush(fg);
 
-        // Rounded-ish square
-        g.FillRectangle(bgBrush, 1, 1, 14, 14);
+        // Rounded rectangle background
+        using var path = new GraphicsPath();
+        path.AddArc(1, 1, 4, 4, 180, 90);
+        path.AddArc(11, 1, 4, 4, 270, 90);
+        path.AddArc(11, 11, 4, 4, 0, 90);
+        path.AddArc(1, 11, 4, 4, 90, 90);
+        path.CloseFigure();
+        g.FillPath(bgBrush, path);
 
         // "F" letterform
-        using var font = new Font("Arial", 8.5f, FontStyle.Bold, GraphicsUnit.Point);
-        g.DrawString("F", font, fgBrush, 2f, 2f);
+        using var font = new Font("Segoe UI", 8f, FontStyle.Bold, GraphicsUnit.Point);
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+        g.DrawString("F", font, fgBrush, 2.5f, 1.5f);
 
-        // Small dot bottom-right to indicate active
+        // Small green dot bottom-right when active
         if (enabled)
         {
-            using var dotBrush = new SolidBrush(Color.FromArgb(80, 255, 80));
+            using var dotBrush = new SolidBrush(Color.FromArgb(15, 123, 15));
             g.FillEllipse(dotBrush, 10, 10, 5, 5);
         }
 
