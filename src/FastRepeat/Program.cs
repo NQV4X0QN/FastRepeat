@@ -199,7 +199,7 @@ static class Program
         // Remove uninstall registry entry
         try
         {
-            Registry.CurrentUser.DeleteSubKey(UninstallRegKey, throwOnMissingValue: false);
+            try { Registry.CurrentUser.DeleteSubKey(UninstallRegKey); } catch { }
         }
         catch { }
 
