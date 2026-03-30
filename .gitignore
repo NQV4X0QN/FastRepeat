@@ -1,0 +1,56 @@
+## Visual Studio / .NET
+.vs/
+bin/
+obj/
+dist/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+.idea/
+
+## Build outputs
+[Pp]ublish/
+[Rr]elease/
+[Dd]ebug/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## User-specific settings
+*.rsuser
+*.userosscache
+*.sln.docstates
+*.user
+*.suo
+
+## Rider
+.idea/
+
+## macOS
+.DS_Store
+Thumbs.db
+
+## Secrets / env
+*.env
+*.env.local
+secrets.json
