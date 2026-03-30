@@ -231,7 +231,7 @@ internal sealed class MainForm : Form
         var binding = dlg.Captured;
         if (_settings.Bindings.Any(b => b.Id == binding.Id))
         {
-            MessageBox.Show($""{binding.DisplayName}" is already assigned.", "Already Assigned",
+            MessageBox.Show($"\"{binding.DisplayName}\" is already assigned.", "Already Assigned",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
