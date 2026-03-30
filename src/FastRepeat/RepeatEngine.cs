@@ -14,7 +14,7 @@ internal sealed class RepeatEngine : IDisposable
     private readonly AppSettings _settings;
 
     private readonly Dictionary<string, CancellationTokenSource> _active = [];
-    private readonly Lock _lock = new();
+    private readonly object _lock = new();
 
     public bool IsEnabled { get; set; } = true;
 
