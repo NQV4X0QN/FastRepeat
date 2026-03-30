@@ -80,17 +80,20 @@ internal static class UpdateManager
 
     /// <summary>
     /// Writes a batch file that waits for this process to exit, moves the new EXE
-    /// over the old one, restarts it, then self-deletes. Call Application.Exit() after.
+    /// over the old one, restarts it, then self-deletes.
+    /// Always targets the installed location so updates go to the right place.
     /// </summary>
     public static void ApplyUpdate(string currentExe, string newExe)
     {
+        // Always update the installed copy (in case user is somehow running from elsewhere)
+        var targetExe = Program.InstalledExePath;
         var bat = Path.Combine(Path.GetTempPath(), "FastRepeat_update.bat");
 
         File.WriteAllText(bat, $"""
             @echo off
             ping -n 3 127.0.0.1 > nul
-            move /y "{newExe}" "{currentExe}"
-            start "" "{currentExe}"
+            move /y "{newExe}" "{targetExe}"
+            start "" "{targetExe}"
             del "%~f0"
             """);
 

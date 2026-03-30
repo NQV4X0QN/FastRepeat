@@ -7,6 +7,7 @@ public class AppSettings
     public int           RepeatIntervalMs { get; set; } = 100;
     public bool          IsSpeedLocked    { get; set; } = false;
     public bool          IsEnabled        { get; set; } = true;
+    public bool          RunAtStartup     { get; set; } = false;
     public List<KeyBinding> Bindings      { get; set; } = [];
 
     // ── Persistence ──────────────────────────────────────────────────────────

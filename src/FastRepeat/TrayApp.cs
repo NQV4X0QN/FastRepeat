@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
 using FastRepeat.Models;
+using Microsoft.Win32;
 
 namespace FastRepeat;
 
@@ -12,11 +13,15 @@ namespace FastRepeat;
 /// </summary>
 internal sealed class TrayApp : ApplicationContext
 {
+    private const string StartupRegKey  = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string StartupRegName = "FastRepeat";
+
     private readonly AppSettings  _settings;
     private readonly HookManager  _hooks;
     private readonly RepeatEngine _engine;
     private readonly NotifyIcon   _tray;
     private readonly ToolStripMenuItem _enableItem;
+    private readonly ToolStripMenuItem _startupItem;
 
     private MainForm? _form;
 
@@ -25,6 +30,9 @@ internal sealed class TrayApp : ApplicationContext
         _settings = AppSettings.Load();
         _hooks    = new HookManager();
         _engine   = new RepeatEngine(_hooks, _settings);
+
+        // Sync the registry with the persisted setting on startup
+        SyncStartupRegistry(_settings.RunAtStartup);
 
         // ── Tray context menu ───────────────────────────────────────────────
         var menu = new ContextMenuStrip();
@@ -38,6 +46,10 @@ internal sealed class TrayApp : ApplicationContext
         _enableItem = new ToolStripMenuItem("Enabled") { CheckOnClick = true, Checked = _settings.IsEnabled };
         _enableItem.Click += ToggleEnable;
         menu.Items.Add(_enableItem);
+
+        _startupItem = new ToolStripMenuItem("Run at Startup") { CheckOnClick = true, Checked = _settings.RunAtStartup };
+        _startupItem.Click += ToggleStartup;
+        menu.Items.Add(_startupItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
@@ -91,6 +103,37 @@ internal sealed class TrayApp : ApplicationContext
         }
     }
 
+    private void ToggleStartup(object? sender, EventArgs e)
+    {
+        _settings.RunAtStartup = _startupItem.Checked;
+        _settings.Save();
+        SyncStartupRegistry(_settings.RunAtStartup);
+    }
+
+    /// <summary>
+    /// Adds or removes the HKCU Run registry entry to control Windows login startup.
+    /// Uses the installed EXE path so it works correctly after self-install.
+    /// </summary>
+    private static void SyncStartupRegistry(bool enable)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(StartupRegKey, writable: true);
+            if (key == null) return;
+
+            if (enable)
+            {
+                var exePath = Application.ExecutablePath;
+                key.SetValue(StartupRegName, $"\"{exePath}\"");
+            }
+            else
+            {
+                key.DeleteValue(StartupRegName, throwOnMissingValue: false);
+            }
+        }
+        catch { /* non-critical — user may not have registry access */ }
+    }
+
     private void UpdateTray()
     {
         bool en = _settings.IsEnabled;
@@ -121,14 +164,12 @@ internal sealed class TrayApp : ApplicationContext
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
 
-        // Windows 11 accent blue when enabled, muted grey when disabled
         var bg = enabled ? Color.FromArgb(0, 95, 184) : Color.FromArgb(128, 128, 128);
         var fg = Color.White;
 
         using var bgBrush = new SolidBrush(bg);
         using var fgBrush = new SolidBrush(fg);
 
-        // Rounded rectangle background
         using var path = new GraphicsPath();
         path.AddArc(1, 1, 4, 4, 180, 90);
         path.AddArc(11, 1, 4, 4, 270, 90);
@@ -137,12 +178,10 @@ internal sealed class TrayApp : ApplicationContext
         path.CloseFigure();
         g.FillPath(bgBrush, path);
 
-        // "F" letterform
         using var font = new Font("Segoe UI", 8f, FontStyle.Bold, GraphicsUnit.Point);
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
         g.DrawString("F", font, fgBrush, 2.5f, 1.5f);
 
-        // Small green dot bottom-right when active
         if (enabled)
         {
             using var dotBrush = new SolidBrush(Color.FromArgb(15, 123, 15));
