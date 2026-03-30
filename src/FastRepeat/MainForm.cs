@@ -221,7 +221,7 @@ internal sealed class MainForm : Form
         };
 
         _addBtn  = MakeBtn("Add Key / Button", autoSize: true);
-        _removeBtn = MakeBtn("Remove", 90);
+        _removeBtn = MakeBtn("Remove", width: 90);
         _modeBtn   = MakeBtn("Toggle Mode", autoSize: true);
         _addBtn.Click   += AddBinding;
         _removeBtn.Click += RemoveBinding;
