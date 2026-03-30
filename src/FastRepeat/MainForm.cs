@@ -37,8 +37,8 @@ internal sealed class MainForm : Form
 
         // ── Window properties ───────────────────────────────────────────────
         Text            = "Fast Repeat";
-        Size            = new Size(480, 460);
-        MinimumSize     = new Size(420, 420);
+        Size            = new Size(520, 490);
+        MinimumSize     = new Size(460, 440);
         FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition   = FormStartPosition.CenterScreen;
         ShowInTaskbar   = true;
@@ -67,22 +67,24 @@ internal sealed class MainForm : Form
         _toggleEnableBtn = new Button
         {
             Width     = 90,
-            Height    = 26,
+            Height    = 30,
             Dock      = DockStyle.Right,
             FlatStyle = FlatStyle.Flat,
             ForeColor = Color.White,
             BackColor = Color.FromArgb(0, 90, 180),
-            Font      = new Font("Segoe UI", 8.5f)
+            Font      = new Font("Segoe UI", 9f),
+            // Vertically centre the button in the 40px header
+            Padding   = new Padding(0, 4, 0, 4)
         };
         _toggleEnableBtn.FlatAppearance.BorderColor = Color.White;
         _toggleEnableBtn.Click += ToggleEnable;
         _headerPanel.Controls.Add(_statusLabel);
         _headerPanel.Controls.Add(_toggleEnableBtn);
 
-        // Bindings group
+        // Bindings group  (use && to display a literal & in a GroupBox label)
         var bindingsGroup = new GroupBox
         {
-            Text    = "Assigned Keys & Mouse Buttons",
+            Text    = "Assigned Keys && Mouse Buttons",
             Dock    = DockStyle.Fill,
             Padding = new Padding(8)
         };
@@ -99,18 +101,20 @@ internal sealed class MainForm : Form
         _bindingsList.Columns.Add("Key / Button", -2, HorizontalAlignment.Left);
         _bindingsList.SelectedIndexChanged += (_, _) => UpdateRemoveButton();
 
+        // Button row — WrapContents=false so text never folds onto a second line
         var btnPanel = new FlowLayoutPanel
         {
             Dock          = DockStyle.Bottom,
-            Height        = 36,
+            Height        = 42,
             FlowDirection = FlowDirection.LeftToRight,
-            Padding       = new Padding(0, 4, 0, 0)
+            WrapContents  = false,
+            Padding       = new Padding(0, 6, 0, 0)
         };
 
-        _addBtn = MakeButton("+ Add Key / Mouse Button", 170);
+        _addBtn = MakeButton("Add Key / Button", autoSize: true);
         _addBtn.Click += AddBinding;
 
-        _removeBtn = MakeButton("Remove Selected", 130);
+        _removeBtn = MakeButton("Remove", 90);
         _removeBtn.Click += RemoveBinding;
         _removeBtn.Enabled = false;
 
@@ -125,7 +129,7 @@ internal sealed class MainForm : Form
         {
             Text    = "Repeat Speed",
             Dock    = DockStyle.Bottom,
-            Height  = 110,
+            Height  = 115,
             Padding = new Padding(8)
         };
 
@@ -173,15 +177,16 @@ internal sealed class MainForm : Form
         var actionRow = new FlowLayoutPanel
         {
             Dock          = DockStyle.Bottom,
-            Height        = 36,
+            Height        = 40,
             FlowDirection = FlowDirection.RightToLeft,
-            Padding       = new Padding(0, 2, 0, 0)
+            WrapContents  = false,
+            Padding       = new Padding(0, 6, 0, 0)
         };
 
-        _lockBtn = MakeButton("Lock Speed", 100);
+        _lockBtn = MakeButton("Lock Speed", autoSize: true);
         _lockBtn.Click += ToggleLock;
 
-        _clearAllBtn = MakeButton("Clear All", 80);
+        _clearAllBtn = MakeButton("Clear All", autoSize: true);
         _clearAllBtn.Click += ClearAll;
 
         actionRow.Controls.Add(_lockBtn);
@@ -340,14 +345,24 @@ internal sealed class MainForm : Form
 
     private void Save() => _settings.Save();
 
-    private static Button MakeButton(string text, int width)
+    private static Button MakeButton(string text, int width = 0, bool autoSize = false)
     {
-        return new Button
+        var btn = new Button
         {
             Text      = text,
-            Width     = width,
-            Height    = 28,
+            Height    = 30,
             FlatStyle = FlatStyle.System
         };
+        if (autoSize)
+        {
+            btn.AutoSize     = true;
+            btn.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            btn.Padding      = new Padding(8, 0, 8, 0);
+        }
+        else
+        {
+            btn.Width = width;
+        }
+        return btn;
     }
 }
