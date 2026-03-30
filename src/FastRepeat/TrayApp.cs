@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -53,6 +54,7 @@ internal sealed class TrayApp : ApplicationContext
 
         menu.Items.Add(new ToolStripSeparator());
 
+        menu.Items.Add("Uninstall").Click += OnUninstall;
         menu.Items.Add("Exit").Click += (_, _) => Shutdown();
 
         // ── Tray icon ───────────────────────────────────────────────────────
@@ -95,10 +97,9 @@ internal sealed class TrayApp : ApplicationContext
         _settings.Save();
         UpdateTray();
 
-        // Keep the open form in sync if it's visible
         if (_form != null && !_form.IsDisposed)
         {
-            _form.Close(); // triggers Hide()
+            _form.Close();
             ShowForm();
         }
     }
@@ -110,9 +111,25 @@ internal sealed class TrayApp : ApplicationContext
         SyncStartupRegistry(_settings.RunAtStartup);
     }
 
+    private void OnUninstall(object? sender, EventArgs e)
+    {
+        // Hide tray, stop hooks, then launch the uninstaller
+        _tray.Visible = false;
+        _engine.Dispose();
+        _hooks.Dispose();
+
+        // Relaunch self with --uninstall flag
+        var exePath = Application.ExecutablePath;
+        Process.Start(new ProcessStartInfo(exePath, "--uninstall")
+        {
+            UseShellExecute = true
+        });
+
+        Application.Exit();
+    }
+
     /// <summary>
     /// Adds or removes the HKCU Run registry entry to control Windows login startup.
-    /// Uses the installed EXE path so it works correctly after self-install.
     /// </summary>
     private static void SyncStartupRegistry(bool enable)
     {
@@ -131,7 +148,7 @@ internal sealed class TrayApp : ApplicationContext
                 key.DeleteValue(StartupRegName, throwOnMissingValue: false);
             }
         }
-        catch { /* non-critical — user may not have registry access */ }
+        catch { }
     }
 
     private void UpdateTray()

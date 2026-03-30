@@ -6,6 +6,35 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+
+## [1.5.1] — 2025-03-30
+
+### Added
+- **Self-install to LocalAppData** — on first launch, the EXE copies itself to
+  `%LOCALAPPDATA%\FastRepeat\FastRepeat.exe` and relaunches from there. The
+  original downloaded file can be safely deleted afterward.
+- **Start Menu shortcut** — created automatically during self-install via a
+  VBScript shim so the app appears in Windows search and the Start Menu programs list.
+- **Add/Remove Programs registration** — writes an uninstall entry to
+  `HKCU\...\Uninstall\FastRepeat` with display name, version, publisher, icon,
+  and estimated size. The app now appears in Windows Settings > Apps & Features.
+- **Full uninstall support** — accessible via the tray menu ("Uninstall") or
+  Windows Apps & Features. Prompts to confirm, optionally removes saved settings,
+  cleans up registry entries (startup + uninstall), deletes the Start Menu shortcut,
+  and removes the EXE via a batch trampoline.
+- **Run at Startup toggle** — new tray context menu item that writes/removes a
+  `HKCU\...\Run` registry entry. Setting persists in `settings.json` and the
+  registry is re-synced on each launch.
+
+### Changed
+- **UpdateManager.ApplyUpdate** now always targets the installed path at
+  `%LOCALAPPDATA%\FastRepeat` so updates go to the correct location regardless
+  of where the EXE is running from.
+
+---
+
+
+
 ## [1.5.0] — 2026-03-30
 
 ### Added
@@ -124,6 +153,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Self-contained single-file `.exe` build via GitHub Actions (no .NET runtime required).
 - MIT License.
 
+[1.5.1]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.5.1
 [1.5.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.5.0
 [1.4.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.4.0
 [1.3.0]: https://github.com/NQV4X0QN/FastRepeat/releases/tag/v1.3.0

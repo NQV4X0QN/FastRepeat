@@ -9,7 +9,7 @@ namespace FastRepeat;
 /// </summary>
 internal static class UpdateManager
 {
-    public const string CurrentVersion = "1.5.0";
+    public const string CurrentVersion = "1.5.1";
 
     private const string Owner     = "NQV4X0QN";
     private const string Repo      = "FastRepeat";
