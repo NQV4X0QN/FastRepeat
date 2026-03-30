@@ -46,7 +46,21 @@ static class Program
             try
             {
                 Directory.CreateDirectory(InstallDir);
-                File.Copy(currentExe, InstalledExePath, overwrite: true);
+
+                // Retry copy with brief waits — handles the case where a previous
+                // instance's uninstall batch trampoline hasn't released the file yet.
+                for (int attempt = 0; attempt < 10; attempt++)
+                {
+                    try
+                    {
+                        File.Copy(currentExe, InstalledExePath, overwrite: true);
+                        break;
+                    }
+                    catch (IOException) when (attempt < 9)
+                    {
+                        Thread.Sleep(500);
+                    }
+                }
                 CreateStartMenuShortcut();
                 RegisterUninstaller();
 
