@@ -2,6 +2,7 @@ mod config;
 mod engine;
 mod injector;
 mod input;
+mod gui;
 
 use clap::{Parser, Subcommand};
 use config::{AppSettings, KeyBinding};
@@ -23,7 +24,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Run the repeater daemon (default if no command given)
+    /// Launch the graphical interface (default if no command given)
+    Gui,
+    /// Run the repeater daemon
     Run,
     /// Add a new key binding interactively
     Add,
@@ -55,7 +58,8 @@ async fn main() {
 
     let cli = Cli::parse();
 
-    match cli.command.unwrap_or(Commands::Run) {
+    match cli.command.unwrap_or(Commands::Gui) {
+        Commands::Gui => gui::run_gui(),
         Commands::Run => cmd_run().await,
         Commands::Add => cmd_add(),
         Commands::List => cmd_list(),

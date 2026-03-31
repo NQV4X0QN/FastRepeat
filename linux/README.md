@@ -7,6 +7,7 @@ System-wide key and mouse button repeater for Linux. Works on both X11 and Wayla
 - Linux kernel with evdev and uinput support (all modern distros)
 - User must be in the `input` group
 - Rust toolchain for building from source
+- GTK4 development packages (for GUI mode)
 
 ## Quick Start
 
@@ -21,18 +22,42 @@ cargo build --release
 # Add your user to the input group (required, log out/in after)
 sudo usermod -aG input $USER
 
-# Add a key binding
+# Launch the GUI (default)
+fastrepeat
+
+# Or, add a key binding via CLI
 fastrepeat add
 
-# Run
+# Run the daemon
 fastrepeat run
 ```
+
+## GUI Mode
+
+Fast Repeat includes a native GTK4/libadwaita graphical interface:
+
+```bash
+fastrepeat gui    # launch the GUI
+fastrepeat        # also launches GUI (default)
+```
+
+The GUI provides:
+- **Key bindings list** with add/remove/toggle mode buttons
+- **Speed slider** with lock to prevent accidental changes
+- **Enable/disable toggle** in the header bar for quick control
+- Native GNOME/libadwaita styling with dark/light theme support
+
+Note: Key capture (adding bindings) currently requires the CLI — the GUI will prompt
+you to run `fastrepeat add` in a terminal. All other operations (remove, toggle mode,
+adjust speed, enable/disable) work directly in the GUI.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `fastrepeat run` | Start the repeater daemon (default) |
+| `fastrepeat` | Launch the GUI (default) |
+| `fastrepeat gui` | Launch the GUI explicitly |
+| `fastrepeat run` | Start the repeater daemon |
 | `fastrepeat add` | Interactively add a key binding |
 | `fastrepeat list` | Show all configured bindings |
 | `fastrepeat remove <index>` | Remove a binding by index |
