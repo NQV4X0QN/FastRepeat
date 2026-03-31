@@ -341,7 +341,7 @@ fn show_add_dialog(
 
             // Step 2: Capture output
             show_capture_dialog(
-                &win2,
+                &win2.clone(),
                 "Step 2 of 2 — Capture Output",
                 &format!(
                     "Trigger: <b>{}</b>\n\nNow press the key to <b>repeat</b> as output, or press the same key for self-repeat.",
