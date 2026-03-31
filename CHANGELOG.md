@@ -7,6 +7,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 
+## [1.7.8] — 2026-03-31
+
+### Fixed (Linux)
+- **GUI now runs the repeat engine** — previously, launching the GUI (`fastrepeat gui`
+  or the AppImage) only showed the settings window. Key repeating only worked if you
+  separately ran `fastrepeat run` as a daemon. Now the GUI starts the repeat engine
+  in a background thread automatically, matching Windows behavior where the single app
+  does everything.
+  - Engine runs in its own tokio runtime on a background thread
+  - If `/dev/uinput` isn't accessible (no input group), engine logs a warning and
+    the GUI still works for configuration — repeating starts working after re-login
+  - Process exit (via tray "Exit" or closing the app) terminates the engine thread
+  - No separate `fastrepeat run` needed for basic usage anymore
+
+### Changed (Linux)
+- `fastrepeat run` (headless daemon) still works for server/headless use cases
+
+
 ## [1.7.7] — 2026-03-31
 
 ### Fixed (Linux)

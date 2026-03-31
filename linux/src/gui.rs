@@ -8,11 +8,62 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::config::{AppSettings, KeyBinding};
-use crate::input::{is_mouse_button, key_name, capture_key_async, CapturedKey};
+use crate::engine::RepeatEngine;
+use crate::injector::Injector;
+use crate::input::{self, is_mouse_button, key_name, capture_key_async, CapturedKey};
 use crate::tray::{self, TrayAction};
+
+/// Start the repeat engine in a background thread with its own tokio runtime.
+/// This runs the same logic as `fastrepeat run` but alongside the GUI.
+fn start_engine_background() {
+    std::thread::spawn(|| {
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(rt) => rt,
+            Err(e) => {
+                log::error!("Failed to create tokio runtime for engine: {}", e);
+                return;
+            }
+        };
+
+        rt.block_on(async {
+            let settings = AppSettings::load();
+            log::info!(
+                "Engine: loaded {} binding(s), interval {}ms, {}",
+                settings.bindings.len(),
+                settings.repeat_interval_ms,
+                if settings.is_enabled { "enabled" } else { "disabled" }
+            );
+
+            let injector = match Injector::new() {
+                Ok(inj) => inj,
+                Err(e) => {
+                    log::warn!("Engine: could not create virtual device: {}", e);
+                    log::warn!("  Key repeating will not work until input group access is granted.");
+                    return;
+                }
+            };
+
+            let settings = std::sync::Arc::new(std::sync::Mutex::new(settings));
+            let engine = RepeatEngine::new(settings.clone(), injector);
+
+            let (tx, rx) = tokio::sync::mpsc::channel::<input::InputAction>(256);
+
+            tokio::spawn(async move {
+                input::monitor_inputs(tx).await;
+            });
+
+            // Run until the process exits (GTK quit will terminate the process)
+            engine.run(rx).await;
+        });
+    });
+}
 
 /// Launch the GTK4 GUI application
 pub fn run_gui() {
+    // Start the repeat engine in a background thread with its own tokio runtime.
+    // This makes the GUI a complete standalone app — no separate `fastrepeat run` needed.
+    start_engine_background();
+
     let app = adw::Application::builder()
         .application_id("io.github.nqv4x0qn.fastrepeat")
         .build();
