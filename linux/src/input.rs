@@ -93,3 +93,70 @@ fn monitor_device(mut device: Device, path: &Path, tx: mpsc::Sender<InputAction>
 pub fn key_name(code: u16) -> String {
     format!("{:?}", Key::new(code))
 }
+
+/// Result of a single key/button capture
+#[derive(Debug, Clone)]
+pub struct CapturedKey {
+    pub code: u16,
+    pub is_mouse: bool,
+    pub name: String,
+    pub device_name: String,
+}
+
+/// Capture a single key press from evdev devices in a background thread.
+/// Returns a oneshot receiver that resolves with the captured key, and a
+/// cancellation sender that aborts the capture when dropped or sent.
+///
+/// This is safe to call from the GTK main thread — the blocking evdev reads
+/// happen on a spawned std::thread.
+pub fn capture_key_async() -> (
+    std::sync::mpsc::Receiver<CapturedKey>,
+    std::sync::Arc<std::sync::atomic::AtomicBool>,
+) {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let cancelled_clone = cancelled.clone();
+
+    std::thread::spawn(move || {
+        // Enumerate devices that support KEY events
+        let devices: Vec<_> = evdev::enumerate().collect();
+        let mut kbd_devices: Vec<_> = devices.into_iter()
+            .filter(|(_, d)| d.supported_events().contains(EventType::KEY))
+            .collect();
+
+        if kbd_devices.is_empty() {
+            // No devices — the receiver will just get a RecvError
+            return;
+        }
+
+        loop {
+            if cancelled_clone.load(std::sync::atomic::Ordering::Relaxed) {
+                return;
+            }
+            for (_, device) in kbd_devices.iter_mut() {
+                if let Ok(events) = device.fetch_events() {
+                    for event in events {
+                        if let InputEventKind::Key(key) = event.kind() {
+                            if event.value() == 1 {
+                                let code = key.code();
+                                let result = CapturedKey {
+                                    code,
+                                    is_mouse: is_mouse_button(code),
+                                    name: key_name(code),
+                                    device_name: device.name()
+                                        .unwrap_or("unknown device")
+                                        .to_string(),
+                                };
+                                let _ = tx.send(result);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    });
+
+    (rx, cancelled)
+}

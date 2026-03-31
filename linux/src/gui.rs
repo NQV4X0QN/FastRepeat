@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::config::{AppSettings, KeyBinding};
-use crate::input::{is_mouse_button, key_name};
+use crate::input::{is_mouse_button, key_name, capture_key_async, CapturedKey};
 
 /// Launch the GTK4 GUI application
 pub fn run_gui() {
@@ -317,35 +317,52 @@ fn populate_bindings_list(list: &gtk::ListBox, settings: &AppSettings) {
     }
 }
 
+/// Show the native evdev capture dialog for adding a new key binding.
+/// Two-step flow: capture trigger, then capture output, then mode selection.
 fn show_add_dialog(
     window: &adw::ApplicationWindow,
     settings: &Rc<RefCell<AppSettings>>,
     list: &gtk::ListBox,
 ) {
-    let dialog = gtk::MessageDialog::builder()
-        .transient_for(window)
-        .modal(true)
-        .message_type(gtk::MessageType::Info)
-        .buttons(gtk::ButtonsType::Ok)
-        .text("Add Key Binding")
-        .secondary_text("Key capture requires the CLI.\n\nRun this command in a terminal:\n\n  fastrepeat add\n\nThen restart the GUI to see the new binding.")
-        .build();
-
     let s = settings.clone();
     let l = list.clone();
-    dialog.connect_response(move |dlg, _| {
-        dlg.close();
-        let reloaded = AppSettings::load();
-        *s.borrow_mut() = reloaded;
-        populate_bindings_list(&l, &s.borrow());
-    });
-    dialog.present();
+    let win = window.clone();
+
+    // Step 1: Capture trigger
+    show_capture_dialog(
+        &win,
+        "Step 1 of 2 — Capture Trigger",
+        "Press the key or mouse button you want to use as the <b>trigger</b> (the key you hold down).",
+        move |trigger| {
+            let s2 = s.clone();
+            let l2 = l.clone();
+            let win2 = win.clone();
+            let trigger = trigger.clone();
+
+            // Step 2: Capture output
+            show_capture_dialog(
+                &win2,
+                "Step 2 of 2 — Capture Output",
+                &format!(
+                    "Trigger: <b>{}</b>\n\nNow press the key to <b>repeat</b> as output, or press the same key for self-repeat.",
+                    trigger.name
+                ),
+                move |output| {
+                    let same_key = output.code == trigger.code;
+
+                    // Step 3: Mode selection dialog
+                    show_mode_dialog(&win2, &trigger, output, same_key, &s2, &l2);
+                },
+            );
+        },
+    );
 }
 
+/// Show the native evdev capture dialog for changing the output of an existing binding.
 fn show_set_output_dialog(
     window: &adw::ApplicationWindow,
     settings: &Rc<RefCell<AppSettings>>,
-    _list: &gtk::ListBox,
+    list: &gtk::ListBox,
     index: usize,
 ) {
     let trigger_name = {
@@ -357,17 +374,175 @@ fn show_set_output_dialog(
         }
     };
 
+    let s = settings.clone();
+    let l = list.clone();
+
+    show_capture_dialog(
+        window,
+        "Set Output Key",
+        &format!(
+            "Trigger: <b>{}</b>\n\nPress the new key to <b>repeat</b> as output, or press the trigger key for self-repeat.",
+            trigger_name
+        ),
+        move |output| {
+            let mut settings = s.borrow_mut();
+            if index < settings.bindings.len() {
+                let b = &mut settings.bindings[index];
+                let same_key = output.code == b.trigger_code;
+
+                b.output_code = if same_key { None } else { Some(output.code) };
+                b.output_is_mouse = if same_key { None } else { Some(output.is_mouse) };
+                b.display_name = if same_key {
+                    format!("{} → self", key_name(b.trigger_code))
+                } else {
+                    format!("{} → {}", key_name(b.trigger_code), output.name)
+                };
+
+                let _ = settings.save();
+                drop(settings);
+                populate_bindings_list(&l, &s.borrow());
+            }
+        },
+    );
+}
+
+/// Core capture dialog — shows an Adwaita dialog that reads evdev input in a background thread.
+/// Calls `on_captured` with the result when a key is pressed.
+fn show_capture_dialog<F: Fn(&CapturedKey) + 'static>(
+    window: &adw::ApplicationWindow,
+    title: &str,
+    markup: &str,
+    on_captured: F,
+) {
     let dialog = gtk::MessageDialog::builder()
         .transient_for(window)
         .modal(true)
-        .message_type(gtk::MessageType::Info)
-        .buttons(gtk::ButtonsType::Ok)
-        .text("Set Output Key")
-        .secondary_text(&format!(
-            "Trigger: {}\n\nTo change the output key, run:\n\n  fastrepeat remove {}\n  fastrepeat add\n\nThen restart the GUI.",
-            trigger_name, index
-        ))
+        .message_type(gtk::MessageType::Question)
+        .buttons(gtk::ButtonsType::Cancel)
+        .text(title)
+        .use_markup(true)
+        .secondary_use_markup(true)
+        .secondary_text(markup)
         .build();
-    dialog.connect_response(|dlg, _| dlg.close());
+
+    // Add a status label below the message
+    let status_label = gtk::Label::new(Some("Listening for input…"));
+    status_label.add_css_class("dim-label");
+    status_label.set_margin_top(8);
+    dialog.content_area().append(&status_label);
+
+    // Start background evdev capture
+    let (rx, cancel_flag) = capture_key_async();
+
+    // Poll for capture result using a GLib timeout (runs on GTK main thread)
+    let dialog_clone = dialog.clone();
+    let status_label_clone = status_label.clone();
+
+    glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
+        match rx.try_recv() {
+            Ok(captured) => {
+                // Key captured — close dialog and invoke callback
+                dialog_clone.close();
+                on_captured(&captured);
+                glib::ControlFlow::Break
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                // Still waiting
+                glib::ControlFlow::Continue
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                // Background thread ended without result (no devices / permission error)
+                status_label_clone.set_text("✗ Cannot read input devices. Check 'input' group membership.");
+                status_label_clone.remove_css_class("dim-label");
+                status_label_clone.add_css_class("error");
+                glib::ControlFlow::Break
+            }
+        }
+    });
+
+    // Cancel the background capture if user closes/cancels the dialog
+    dialog.connect_response(move |dlg, _| {
+        cancel_flag.store(true, std::sync::atomic::Ordering::Relaxed);
+        dlg.close();
+    });
+
+    dialog.present();
+}
+
+/// Show mode selection dialog after both keys are captured, then save the binding.
+fn show_mode_dialog(
+    window: &adw::ApplicationWindow,
+    trigger: &CapturedKey,
+    output: &CapturedKey,
+    same_key: bool,
+    settings: &Rc<RefCell<AppSettings>>,
+    list: &gtk::ListBox,
+) {
+    let summary = if same_key {
+        format!("{} → self-repeat", trigger.name)
+    } else {
+        format!("{} → {}", trigger.name, output.name)
+    };
+
+    let dialog = gtk::MessageDialog::builder()
+        .transient_for(window)
+        .modal(true)
+        .message_type(gtk::MessageType::Question)
+        .text("Choose Repeat Mode")
+        .secondary_text(&format!("{}\n\nHow should this binding behave?", summary))
+        .build();
+
+    dialog.add_button("Cancel", gtk::ResponseType::Cancel);
+    dialog.add_button("Repeat While Held", gtk::ResponseType::Accept);
+    dialog.add_button("Single Press", gtk::ResponseType::Other(1));
+
+    // Style the primary action
+    if let Some(btn) = dialog.widget_for_response(gtk::ResponseType::Accept) {
+        btn.add_css_class("suggested-action");
+    }
+
+    let s = settings.clone();
+    let l = list.clone();
+    let trigger = trigger.clone();
+    let output = output.clone();
+
+    dialog.connect_response(move |dlg, response| {
+        dlg.close();
+
+        let mode = match response {
+            gtk::ResponseType::Accept => "repeat",
+            gtk::ResponseType::Other(1) => "single_press",
+            _ => return, // cancelled
+        };
+
+        // Check for duplicate trigger
+        {
+            let settings = s.borrow();
+            if settings.bindings.iter().any(|b| {
+                b.trigger_code == trigger.code && b.trigger_is_mouse == trigger.is_mouse
+            }) {
+                // TODO: could show an error dialog here; for now just skip
+                return;
+            }
+        }
+
+        let binding = KeyBinding {
+            trigger_code: trigger.code,
+            trigger_is_mouse: trigger.is_mouse,
+            output_code: if same_key { None } else { Some(output.code) },
+            output_is_mouse: if same_key { None } else { Some(output.is_mouse) },
+            mode: mode.to_string(),
+            display_name: if same_key {
+                format!("{} → self", trigger.name)
+            } else {
+                format!("{} → {}", trigger.name, output.name)
+            },
+        };
+
+        s.borrow_mut().bindings.push(binding);
+        let _ = s.borrow().save();
+        populate_bindings_list(&l, &s.borrow());
+    });
+
     dialog.present();
 }

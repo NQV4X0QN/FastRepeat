@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 use config::{AppSettings, KeyBinding};
 use engine::RepeatEngine;
 use injector::Injector;
-use input::{is_mouse_button, key_name};
+use input::{is_mouse_button, key_name, CapturedKey};
 use log::{error, info};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
@@ -155,9 +155,7 @@ fn cmd_add() {
     println!("  (press Ctrl+C to cancel)\n");
 
     let trigger = capture_key(&mut kbd_devices);
-    let trigger_name = key_name(trigger.code);
-    let trigger_is_mouse = is_mouse_button(trigger.code);
-    println!("  Detected: {} (code {}) on {}", trigger_name, trigger.code, trigger.device_name);
+    println!("  Detected: {} (code {}) on {}", trigger.name, trigger.code, trigger.device_name);
 
     if !confirm("  Use this as trigger?") {
         println!("Cancelled.");
@@ -169,14 +167,12 @@ fn cmd_add() {
     println!("  (press Ctrl+C to cancel)\n");
 
     let output = capture_key(&mut kbd_devices);
-    let output_name = key_name(output.code);
-    let output_is_mouse = is_mouse_button(output.code);
     let same_key = output.code == trigger.code;
 
     if same_key {
-        println!("  Detected: {} (self-repeat)", trigger_name);
+        println!("  Detected: {} (self-repeat)", trigger.name);
     } else {
-        println!("  Detected: {} (code {}) on {}", output_name, output.code, output.device_name);
+        println!("  Detected: {} (code {}) on {}", output.name, output.code, output.device_name);
     }
 
     if !confirm("  Use this as output?") {
@@ -194,21 +190,21 @@ fn cmd_add() {
     // --- Step 4: Check for duplicates and save ---
     let mut settings = AppSettings::load();
 
-    if settings.bindings.iter().any(|b| b.trigger_code == trigger.code && b.trigger_is_mouse == trigger_is_mouse) {
-        eprintln!("\n✗ A binding for {} already exists. Remove it first with 'fastrepeat remove'.", trigger_name);
+    if settings.bindings.iter().any(|b| b.trigger_code == trigger.code && b.trigger_is_mouse == trigger.is_mouse) {
+        eprintln!("\n✗ A binding for {} already exists. Remove it first with 'fastrepeat remove'.", trigger.name);
         std::process::exit(1);
     }
 
     let binding = KeyBinding {
         trigger_code: trigger.code,
-        trigger_is_mouse,
+        trigger_is_mouse: trigger.is_mouse,
         output_code: if same_key { None } else { Some(output.code) },
-        output_is_mouse: if same_key { None } else { Some(output_is_mouse) },
+        output_is_mouse: if same_key { None } else { Some(output.is_mouse) },
         mode: mode_str.to_string(),
         display_name: if same_key {
-            format!("{} → self", trigger_name)
+            format!("{} → self", trigger.name)
         } else {
-            format!("{} → {}", trigger_name, output_name)
+            format!("{} → {}", trigger.name, output.name)
         },
     };
 
@@ -217,17 +213,11 @@ fn cmd_add() {
 
     let mode_label = if mode == 1 { "repeat while held" } else { "single press" };
     println!("\n✓ Added binding: {} → {} ({})",
-        trigger_name,
-        if same_key { "self".to_string() } else { output_name },
+        trigger.name,
+        if same_key { "self".to_string() } else { output.name.clone() },
         mode_label);
     println!("  Speed: {}ms (use 'fastrepeat speed <ms>' to change)", settings.repeat_interval_ms);
     println!("  Restart the daemon to apply: fastrepeat run");
-}
-
-/// Result of a key capture, including which device it came from.
-struct CapturedKey {
-    code: u16,
-    device_name: String,
 }
 
 fn capture_key(devices: &mut [(std::path::PathBuf, evdev::Device)]) -> CapturedKey {
@@ -238,11 +228,14 @@ fn capture_key(devices: &mut [(std::path::PathBuf, evdev::Device)]) -> CapturedK
                     for event in events {
                         if let evdev::InputEventKind::Key(key) = event.kind() {
                             if event.value() == 1 {
+                                let code = key.code();
                                 let device_name = device.name()
                                     .unwrap_or("unknown device")
                                     .to_string();
                                 return CapturedKey {
-                                    code: key.code(),
+                                    code,
+                                    is_mouse: is_mouse_button(code),
+                                    name: key_name(code),
                                     device_name,
                                 };
                             }
