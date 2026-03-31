@@ -7,6 +7,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 
+## [1.7.3] — 2026-03-31
+
+### Fixed (Linux)
+- **`fastrepeat add` CLI** — completely rewritten interactive flow:
+  - Upfront permission check: tests evdev read access before prompting, exits immediately
+    with actionable "add yourself to the input group" message if denied (was: silent hang)
+  - Clear step-by-step flow: Step 1/2 (trigger) → Step 2/2 (output) with Ctrl+C hint
+  - Shows device name on capture (e.g. "Logitech G502 X") — helps identify hardware buttons
+  - Y/n confirmation after each capture so user can re-do if they hit the wrong key
+  - Repeat mode selection: repeat while held (default) or single press on hold
+  - Summary on success showing binding, speed, and restart hint
+
+
 ## [1.5.1] — 2025-03-30
 
 ### Added
