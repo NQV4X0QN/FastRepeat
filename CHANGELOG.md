@@ -7,6 +7,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 
+## [1.7.7] — 2026-03-31
+
+### Fixed (Linux)
+- **Input feedback loop / lockup** — the input monitor now skips FastRepeat's own
+  uinput virtual device ("FastRepeat Virtual Device"). Previously, injected key events
+  were read back as real input, which could cause:
+  - App lockup when certain keys were used as output (e.g. numpad multiply)
+  - Phantom repeat triggers from synthetic events
+  - Potential infinite repeat loops if an injected key matched any trigger binding
+- **Shared device name constant** — `VIRTUAL_DEVICE_NAME` is defined in `injector.rs`
+  and referenced by `input.rs` to ensure the filter stays in sync
+
+
 ## [1.7.6] — 2026-03-31
 
 ### Fixed (Linux)

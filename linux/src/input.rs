@@ -4,6 +4,8 @@ use std::path::Path;
 use tokio::sync::mpsc;
 use log::{info, warn, debug};
 
+use crate::injector::VIRTUAL_DEVICE_NAME;
+
 /// Events sent from the input monitor to the engine
 #[derive(Debug, Clone)]
 pub enum InputAction {
@@ -32,6 +34,13 @@ pub async fn monitor_inputs(tx: mpsc::Sender<InputAction>) {
 
         // Only monitor devices that produce key events
         if !supported.contains(EventType::KEY) {
+            continue;
+        }
+
+        // Skip our own virtual device to prevent feedback loops
+        // (injected events would be read back as real input)
+        if name == VIRTUAL_DEVICE_NAME {
+            info!("Skipping own virtual device: {}", path.display());
             continue;
         }
 

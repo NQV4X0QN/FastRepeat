@@ -3,6 +3,9 @@ use evdev::{AttributeSet, EventType, InputEvent, Key, RelativeAxisType};
 use log::info;
 use std::io;
 
+/// Name of the virtual device — used by input.rs to filter it from monitoring
+pub const VIRTUAL_DEVICE_NAME: &str = "FastRepeat Virtual Device";
+
 /// Wrapper around a uinput virtual device for injecting synthetic key/mouse events
 pub struct Injector {
     device: evdev::uinput::VirtualDevice,
@@ -17,7 +20,7 @@ impl Injector {
         }
 
         let device = VirtualDeviceBuilder::new()?
-            .name("FastRepeat Virtual Device")
+            .name(VIRTUAL_DEVICE_NAME)
             .with_keys(&keys)?
             .with_relative_axes(&{
                 let mut axes = AttributeSet::<RelativeAxisType>::new();
