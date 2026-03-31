@@ -1,6 +1,6 @@
 [package]
 name = "fastrepeat"
-version = "1.7.4"
+version = "1.7.5"
 edition = "2021"
 authors = ["NQV4X0QN"]
 description = "System-wide key and mouse button repeater for Linux"
@@ -21,6 +21,7 @@ signal-hook = "0.3"
 signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
 gtk4 = { version = "0.9", features = ["v4_6"] }
 libadwaita = { version = "0.7", features = ["v1_2"] }
+ksni = "0.2"
 
 [[bin]]
 name = "fastrepeat"

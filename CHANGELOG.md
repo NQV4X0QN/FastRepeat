@@ -7,6 +7,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 
+## [1.7.5] — 2026-03-31
+
+### Added (Linux)
+- **System tray** via StatusNotifierItem (D-Bus) using the `ksni` crate.
+  Works natively on KDE Plasma; on GNOME requires the AppIndicator extension
+  (pre-installed on Ubuntu, Bazzite, Fedora).
+  - **Open** — show/focus the GUI window
+  - **Enabled** — toggle repeater on/off (syncs with GUI switch)
+  - **Run at Startup** — toggle `systemctl --user enable/disable fastrepeat.service`
+  - **Exit** — quit the app (tray + window)
+  - Left-click on tray icon opens the window
+  - Tooltip shows "Fast Repeat — Enabled/Disabled"
+- **Window hides on close** — closing the window hides it instead of quitting.
+  The tray remains active; use "Open" to reshow, "Exit" to actually quit.
+
+### Changed (Linux)
+- Enable/Disable switch in GUI now syncs bidirectionally with tray state
+
+
 ## [1.7.4] — 2026-03-31
 
 ### Added (Linux)

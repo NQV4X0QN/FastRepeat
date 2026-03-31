@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use crate::config::{AppSettings, KeyBinding};
 use crate::input::{is_mouse_button, key_name, capture_key_async, CapturedKey};
+use crate::tray::{self, TrayAction};
 
 /// Launch the GTK4 GUI application
 pub fn run_gui() {
@@ -17,6 +18,12 @@ pub fn run_gui() {
         .build();
 
     app.connect_activate(build_ui);
+
+    // Hold the tray handle to keep it alive for the app lifetime
+    app.connect_startup(|_| {
+        log::info!("GTK application started");
+    });
+
     app.run_with_args::<String>(&[]);
 }
 
@@ -161,15 +168,7 @@ fn build_ui(app: &adw::Application) {
 
     // ── Connect signals ───────────────────────────────────────────
 
-    // Enable/Disable switch
-    {
-        let s = settings.clone();
-        enable_switch.connect_state_set(move |_, state| {
-            s.borrow_mut().is_enabled = state;
-            let _ = s.borrow().save();
-            glib::Propagation::Proceed
-        });
-    }
+    // Enable/Disable switch — synced with tray state below in the tray section
 
     // Speed slider
     {
@@ -270,6 +269,64 @@ fn build_ui(app: &adw::Application) {
                 let idx = row.index() as usize;
                 show_set_output_dialog(&win, &s, &list, idx);
             }
+        });
+    }
+
+    // ── System tray ───────────────────────────────────────────────
+    let initial_enabled = settings.borrow().is_enabled;
+    let (tray_rx, tray_state, _tray_handle) = tray::start_tray(initial_enabled);
+
+    // When window close is requested, hide instead of destroy (tray keeps running)
+    window.connect_close_request(move |win| {
+        win.set_visible(false);
+        glib::Propagation::Stop
+    });
+
+    // Poll tray actions from the background thread
+    {
+        let win = window.clone();
+        let s = settings.clone();
+        let es = enable_switch.clone();
+        let tray_st = tray_state.clone();
+        let app_for_quit = app.clone();
+
+        glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
+            while let Ok(action) = tray_rx.try_recv() {
+                match action {
+                    TrayAction::ShowWindow => {
+                        win.set_visible(true);
+                        win.present();
+                    }
+                    TrayAction::ToggleEnabled => {
+                        let current = s.borrow().is_enabled;
+                        let new_state = !current;
+                        s.borrow_mut().is_enabled = new_state;
+                        let _ = s.borrow().save();
+                        es.set_active(new_state);
+                        tray_st.is_enabled.store(new_state, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    TrayAction::ToggleAutostart => {
+                        tray::do_toggle_autostart(&tray_st);
+                    }
+                    TrayAction::Quit => {
+                        app_for_quit.quit();
+                        return glib::ControlFlow::Break;
+                    }
+                }
+            }
+            glib::ControlFlow::Continue
+        });
+    }
+
+    // Sync tray state when enable switch changes in GUI
+    {
+        let ts = tray_state.clone();
+        let s2 = settings.clone();
+        enable_switch.connect_state_set(move |_, state| {
+            ts.is_enabled.store(state, std::sync::atomic::Ordering::Relaxed);
+            s2.borrow_mut().is_enabled = state;
+            let _ = s2.borrow().save();
+            glib::Propagation::Proceed
         });
     }
 

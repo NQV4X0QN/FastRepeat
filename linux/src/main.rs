@@ -3,6 +3,7 @@ mod engine;
 mod injector;
 mod input;
 mod gui;
+mod tray;
 
 use clap::{Parser, Subcommand};
 use config::{AppSettings, KeyBinding};
