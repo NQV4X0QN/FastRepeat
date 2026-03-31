@@ -134,6 +134,9 @@ pub fn capture_key_async() -> (
                 return;
             }
             for (_, device) in kbd_devices.iter_mut() {
+                let dev_name = device.name()
+                    .unwrap_or("unknown device")
+                    .to_string();
                 if let Ok(events) = device.fetch_events() {
                     for event in events {
                         if let InputEventKind::Key(key) = event.kind() {
@@ -143,9 +146,7 @@ pub fn capture_key_async() -> (
                                     code,
                                     is_mouse: is_mouse_button(code),
                                     name: key_name(code),
-                                    device_name: device.name()
-                                        .unwrap_or("unknown device")
-                                        .to_string(),
+                                    device_name: dev_name,
                                 };
                                 let _ = tx.send(result);
                                 return;

@@ -330,7 +330,7 @@ fn show_add_dialog(
 
     // Step 1: Capture trigger
     show_capture_dialog(
-        &win,
+        &win.clone(),
         "Step 1 of 2 — Capture Trigger",
         "Press the key or mouse button you want to use as the <b>trigger</b> (the key you hold down).",
         move |trigger| {

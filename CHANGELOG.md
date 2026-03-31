@@ -7,7 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 
-## [1.7.4] — 2026-03-31
+## [1.7.3] — 2026-03-31
 
 ### Added (Linux)
 - **Native evdev key capture dialog in GTK4 GUI** — the "Add Key / Button" and "Set
@@ -18,15 +18,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     at 50ms intervals — UI never blocks
   - Cancel button stops the background thread via `AtomicBool` flag
   - Permission errors shown inline in the dialog with group membership instructions
-  - Pango markup in dialogs shows trigger key in bold for clarity
-
-### Changed (Linux)
-- **Shared `CapturedKey` struct** — `input.rs` now exports `CapturedKey` with `code`,
-  `is_mouse`, `name`, and `device_name` fields. Both CLI and GUI use the same type
-  (removed duplicate struct from `main.rs`).
-
-
-## [1.7.3] — 2026-03-31
 
 ### Fixed (Linux)
 - **`fastrepeat add` CLI** — completely rewritten interactive flow:
@@ -37,6 +28,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Y/n confirmation after each capture so user can re-do if they hit the wrong key
   - Repeat mode selection: repeat while held (default) or single press on hold
   - Summary on success showing binding, speed, and restart hint
+
+### Changed (Linux)
+- **Shared `CapturedKey` struct** — `input.rs` now exports `CapturedKey` with `code`,
+  `is_mouse`, `name`, and `device_name` fields. Both CLI and GUI use the same type.
 
 
 ## [1.5.1] — 2025-03-30

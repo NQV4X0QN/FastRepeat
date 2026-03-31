@@ -137,10 +137,14 @@ fn cmd_add() {
     }
 
     // Verify we can actually read events (permission test)
-    let readable_count = kbd_devices.iter_mut().filter(|(_, d)| {
-        d.fetch_events().is_ok()
-    }).count();
-    if readable_count == 0 {
+    let mut readable = false;
+    for (_, d) in kbd_devices.iter_mut() {
+        if d.fetch_events().is_ok() {
+            readable = true;
+            break;
+        }
+    }
+    if !readable {
         eprintln!("✗ Cannot read any input devices (permission denied).");
         eprintln!("  You need to be in the 'input' group. Run:");
         eprintln!("    sudo usermod -aG input $USER");
@@ -223,27 +227,27 @@ fn cmd_add() {
 fn capture_key(devices: &mut [(std::path::PathBuf, evdev::Device)]) -> CapturedKey {
     loop {
         for (path, device) in devices.iter_mut() {
+            // Cache device name before mutable borrow from fetch_events()
+            let dev_name = device.name()
+                .unwrap_or("unknown device")
+                .to_string();
             match device.fetch_events() {
                 Ok(events) => {
                     for event in events {
                         if let evdev::InputEventKind::Key(key) = event.kind() {
                             if event.value() == 1 {
                                 let code = key.code();
-                                let device_name = device.name()
-                                    .unwrap_or("unknown device")
-                                    .to_string();
                                 return CapturedKey {
                                     code,
                                     is_mouse: is_mouse_button(code),
                                     name: key_name(code),
-                                    device_name,
+                                    device_name: dev_name,
                                 };
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    // Log once per device, not every poll cycle — use debug level
                     log::debug!("Could not read from {}: {}", path.display(), e);
                 }
             }
