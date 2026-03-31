@@ -26,6 +26,7 @@ internal sealed class MainForm : Form
     private readonly FluentButton  _addBtn;
     private readonly FluentButton  _removeBtn;
     private readonly FluentButton  _modeBtn;
+    private readonly FluentButton  _outputBtn;
     private readonly TrackBar      _speedSlider;
     private readonly NumericUpDown _speedNumeric;
     private readonly FluentButton  _lockBtn;
@@ -195,15 +196,19 @@ internal sealed class MainForm : Form
         _addBtn    = MakeBtn("Add Key / Button", accent: true);
         _removeBtn = MakeBtn("Remove");
         _modeBtn   = MakeBtn("Toggle Mode");
+        _outputBtn = MakeBtn("Set Output");
         _addBtn.Click    += AddBinding;
         _removeBtn.Click += RemoveBinding;
         _modeBtn.Click   += ToggleMode;
+        _outputBtn.Click += ChangeOutput;
         _removeBtn.Enabled = false;
         _modeBtn.Enabled   = false;
+        _outputBtn.Enabled = false;
 
         bindBtns.Controls.Add(_addBtn);
         bindBtns.Controls.Add(_removeBtn);
         bindBtns.Controls.Add(_modeBtn);
+        bindBtns.Controls.Add(_outputBtn);
 
         // Separator line above buttons
         var bindSep = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = CardBorder };
@@ -266,7 +271,8 @@ internal sealed class MainForm : Form
         {
             Minimum   = 25,
             Maximum   = 600,
-            Width     = 62,
+            Width     = 64,
+            Height    = 26,
             TextAlign = HorizontalAlignment.Center,
             Font      = FontBody,
             BackColor = SubtleBg,
@@ -656,6 +662,7 @@ internal sealed class MainForm : Form
         bool has = _bindingsList.SelectedItems.Count > 0;
         _removeBtn.Enabled = has;
         _modeBtn.Enabled   = has;
+        _outputBtn.Enabled = has;
 
         if (has)
         {
@@ -667,6 +674,32 @@ internal sealed class MainForm : Form
         {
             _modeBtn.Text = "Toggle Mode";
         }
+    }
+
+    private void ChangeOutput(object? sender, EventArgs e)
+    {
+        if (_bindingsList.SelectedItems.Count == 0) return;
+        var id      = (string)_bindingsList.SelectedItems[0].Tag!;
+        var binding = _settings.Bindings.FirstOrDefault(b => b.Id == id);
+        if (binding == null) return;
+
+        using var outDlg = new CaptureDialog(_hooks,
+            title:       "Set Output Key",
+            instruction: $"Trigger: {binding.TriggerDisplayName}\n\nPress the key or button to REPEAT " +
+                         "while holding the trigger.\n\nPress  Esc  to cancel.");
+        if (outDlg.ShowDialog(this) != DialogResult.OK || outDlg.Captured == null) return;
+
+        var output = outDlg.Captured;
+        binding.OutputIsMouseButton  = output.IsMouseButton;
+        binding.OutputVirtualKeyCode = output.VirtualKeyCode;
+        binding.OutputMouseButton    = output.MouseButton;
+
+        Save();
+        RefreshBindingsList();
+        // Re-select the same binding
+        foreach (ListViewItem item in _bindingsList.Items)
+            if ((string)item.Tag! == id) { item.Selected = true; break; }
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void Save() => _settings.Save();
