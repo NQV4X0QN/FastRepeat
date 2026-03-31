@@ -35,7 +35,7 @@ impl Injector {
 
     /// Send a key press + release (tap)
     pub fn tap_key(&mut self, code: u16) -> io::Result<()> {
-        let key = Key::new(code);
+        let _key = Key::new(code);
         let down = InputEvent::new(EventType::KEY, code, 1);
         let up = InputEvent::new(EventType::KEY, code, 0);
         let sync = InputEvent::new(EventType::SYNCHRONIZATION, 0, 0);

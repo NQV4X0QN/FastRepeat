@@ -91,5 +91,5 @@ fn monitor_device(mut device: Device, path: &Path, tx: mpsc::Sender<InputAction>
 
 /// Get a human-readable name for an evdev key code
 pub fn key_name(code: u16) -> String {
-    Key::new(code).to_string()
+    format!("{:?}", Key::new(code))
 }

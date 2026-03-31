@@ -95,12 +95,12 @@ async fn cmd_run() {
     let (tx, rx) = mpsc::channel::<input::InputAction>(256);
 
     // Start input monitoring in the background
-    let monitor_handle = tokio::spawn(async move {
+    let _monitor_handle = tokio::spawn(async move {
         input::monitor_inputs(tx).await;
     });
 
     // Set up signal handling for clean shutdown
-    let engine_ref = &engine;
+    
     tokio::select! {
         _ = engine.run(rx) => {}
         _ = tokio::signal::ctrl_c() => {
@@ -132,14 +132,14 @@ fn cmd_add() {
 
     println!("Press the TRIGGER key (the key you will hold)...");
 
-    let trigger = capture_key(&kbd_devices);
+    let trigger = capture_key(&mut kbd_devices);
     let trigger_name = key_name(trigger.0);
     let trigger_is_mouse = is_mouse_button(trigger.0);
     println!("  Trigger: {} (code {})\n", trigger_name, trigger.0);
 
     println!("Press the OUTPUT key (the key to repeat), or press the same key for self-repeat...");
 
-    let output = capture_key(&kbd_devices);
+    let output = capture_key(&mut kbd_devices);
     let output_name = key_name(output.0);
     let output_is_mouse = is_mouse_button(output.0);
 
@@ -171,11 +171,10 @@ fn cmd_add() {
     println!("\n✓ Binding added. Restart the daemon to apply.");
 }
 
-fn capture_key(devices: &[(std::path::PathBuf, evdev::Device)]) -> (u16, bool) {
+fn capture_key(devices: &mut [(std::path::PathBuf, evdev::Device)]) -> (u16, bool) {
     // Simple blocking capture — read from all devices until we get a key press
-    use std::os::fd::AsRawFd;
     loop {
-        for (_, device) in devices {
+        for (_, device) in devices.iter_mut() {
             // Non-blocking read
             if let Ok(events) = device.fetch_events() {
                 for event in events {
