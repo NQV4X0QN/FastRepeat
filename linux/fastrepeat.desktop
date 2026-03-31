@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Fast Repeat
+Comment=System-wide key and mouse button repeater
+Exec=fastrepeat run
+Terminal=false
+Categories=Utility;
+Keywords=keyboard;mouse;repeat;gaming;

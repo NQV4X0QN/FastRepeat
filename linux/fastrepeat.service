@@ -1,0 +1,12 @@
+[Unit]
+Description=Fast Repeat — system-wide key and mouse button repeater
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/fastrepeat run
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
