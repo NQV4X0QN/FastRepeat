@@ -7,6 +7,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 
+## [1.7.4] — 2026-03-31
+
+### Added (Linux)
+- **Native evdev key capture dialog in GTK4 GUI** — the "Add Key / Button" and "Set
+  Output" buttons now open a real capture dialog instead of telling users to use the CLI.
+  - Three-step flow for Add: capture trigger → capture output → choose repeat mode
+  - Single-step flow for Set Output: capture new output key, updates binding in place
+  - Background `std::thread` reads evdev devices; GTK polls via `glib::timeout_add_local`
+    at 50ms intervals — UI never blocks
+  - Cancel button stops the background thread via `AtomicBool` flag
+  - Permission errors shown inline in the dialog with group membership instructions
+  - Pango markup in dialogs shows trigger key in bold for clarity
+
+### Changed (Linux)
+- **Shared `CapturedKey` struct** — `input.rs` now exports `CapturedKey` with `code`,
+  `is_mouse`, `name`, and `device_name` fields. Both CLI and GUI use the same type
+  (removed duplicate struct from `main.rs`).
+
+
 ## [1.7.3] — 2026-03-31
 
 ### Fixed (Linux)
