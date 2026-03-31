@@ -7,6 +7,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 
+## [1.7.4] — 2026-03-31
+
+### Added (Linux)
+- **AppImage packaging** — download, `chmod +x`, double-click. No terminal needed.
+  - `AppRun` wrapper detects `input` group membership on first launch
+  - If not in the group, shows a graphical dialog (zenity/kdialog) offering to add the user
+  - Uses `pkexec` (polkit) for a graphical password prompt — no terminal `sudo` required
+  - After group add, shows a "please log out and back in" notice
+  - Falls back to terminal prompts if no GUI dialog tool is available
+- **SVG app icon** — dark blue keycap with white "R", matching the Windows .ico style
+- **CI builds AppImage** — `build-linux.yml` now produces `FastRepeat-x86_64.AppImage`
+  alongside the raw binary, both attached to GitHub Releases
+
+### Changed (Linux)
+- **Desktop entry** — `Exec` changed from `fastrepeat run` to `fastrepeat gui` (GUI is the
+  default), added `Icon=fastrepeat` and `StartupNotify=true`
+
+
 ## [1.7.3] — 2026-03-31
 
 ### Added (Linux)

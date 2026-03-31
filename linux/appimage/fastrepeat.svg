@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Dark blue rounded keycap -->
+  <rect x="28" y="28" width="200" height="200" rx="36" ry="36" fill="#1a3a5c"/>
+  <!-- Lighter blue top face of keycap -->
+  <rect x="44" y="36" width="168" height="168" rx="24" ry="24" fill="#2d5f8a"/>
+  <!-- White R -->
+  <text x="128" y="172" font-family="sans-serif" font-weight="700" font-size="140"
+        text-anchor="middle" fill="#ffffff">R</text>
+</svg>
