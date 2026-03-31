@@ -898,22 +898,21 @@ internal class RoundedPanel : Panel
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        // Fill entire rectangle with parent background first so the
-        // rounded corner cutouts show the correct color instead of white.
+        // Clear entire area with parent background so rounded corners
+        // blend seamlessly — no white artifacts at the edges.
         var parentBg = Parent?.BackColor ?? Color.FromArgb(243, 243, 243);
-        using var clearBrush = new SolidBrush(parentBg);
-        g.FillRectangle(clearBrush, 0, 0, Width, Height);
+        g.Clear(parentBg);
 
         var rect = new Rectangle(0, 0, Width - 1, Height - 1);
         using var path    = RoundedRect(rect, Radius);
         using var bgBrush = new SolidBrush(BackColor);
         using var pen     = new Pen(BorderColor, 1f);
 
-        // Clip children to rounded region
-        Region = new Region(RoundedRect(new Rectangle(0, 0, Width, Height), Radius));
-
         g.FillPath(bgBrush, path);
         g.DrawPath(pen, path);
+
+        // No Region clipping — children are padded well inside the
+        // corner radius so they never overlap the rounded edges.
     }
 
     private static GraphicsPath RoundedRect(Rectangle rect, int r)
