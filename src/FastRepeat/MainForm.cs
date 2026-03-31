@@ -76,8 +76,8 @@ internal sealed class MainForm : Form
 
         // ── Window ────────────────────────────────────────────────────────
         Text            = "Fast Repeat";
-        Size            = new Size(640, 660);
-        MinimumSize     = new Size(560, 580);
+        Size            = new Size(720, 660);
+        MinimumSize     = new Size(640, 580);
         FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition   = FormStartPosition.CenterScreen;
         ShowInTaskbar   = true;
@@ -219,7 +219,7 @@ internal sealed class MainForm : Form
         bindCard.Controls.Add(bindTitle);        // Top
 
         // ── Card: Speed ───────────────────────────────────────────────────
-        var speedCard = MakeCard(DockStyle.Bottom, height: 140);
+        var speedCard = MakeCard(DockStyle.Bottom, height: 160);
 
         var speedTitle = new Label
         {
@@ -346,7 +346,7 @@ internal sealed class MainForm : Form
         footer.Controls.Add(footerRight);
 
         // Spacer between speed card and bindings card
-        var cardSpacer = new Panel { Dock = DockStyle.Bottom, Height = 12, BackColor = LayerBg };
+        var cardSpacer = new Panel { Dock = DockStyle.Bottom, Height = 16, BackColor = LayerBg };
 
         body.Controls.Add(bindCard);        // Fill
         body.Controls.Add(cardSpacer);      // Bottom spacer
@@ -897,6 +897,12 @@ internal class RoundedPanel : Panel
     {
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        // Fill entire rectangle with parent background first so the
+        // rounded corner cutouts show the correct color instead of white.
+        var parentBg = Parent?.BackColor ?? Color.FromArgb(243, 243, 243);
+        using var clearBrush = new SolidBrush(parentBg);
+        g.FillRectangle(clearBrush, 0, 0, Width, Height);
 
         var rect = new Rectangle(0, 0, Width - 1, Height - 1);
         using var path    = RoundedRect(rect, Radius);
