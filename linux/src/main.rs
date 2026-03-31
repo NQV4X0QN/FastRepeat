@@ -121,7 +121,7 @@ fn cmd_add() {
 
     // We need to read a raw input event to capture the key
     let devices: Vec<_> = evdev::enumerate().collect();
-    let kbd_devices: Vec<_> = devices.into_iter()
+    let mut kbd_devices: Vec<_> = devices.into_iter()
         .filter(|(_, d)| d.supported_events().contains(evdev::EventType::KEY))
         .collect();
 
