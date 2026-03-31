@@ -121,40 +121,90 @@ async fn cmd_run() {
 
 fn cmd_add() {
     println!("Fast Repeat — Add Key Binding\n");
-    println!("This will capture the next key or mouse button you press.\n");
 
-    // We need to read a raw input event to capture the key
+    // --- Permission check: try to open evdev devices ---
     let devices: Vec<_> = evdev::enumerate().collect();
     let mut kbd_devices: Vec<_> = devices.into_iter()
         .filter(|(_, d)| d.supported_events().contains(evdev::EventType::KEY))
         .collect();
 
     if kbd_devices.is_empty() {
-        eprintln!("No input devices found. Make sure you're in the 'input' group.");
+        eprintln!("✗ No input devices found.");
+        eprintln!("  You need to be in the 'input' group. Run:");
+        eprintln!("    sudo usermod -aG input $USER");
+        eprintln!("  Then log out and back in.");
         std::process::exit(1);
     }
 
-    println!("Press the TRIGGER key (the key you will hold)...");
+    // Verify we can actually read events (permission test)
+    let readable_count = kbd_devices.iter_mut().filter(|(_, d)| {
+        d.fetch_events().is_ok()
+    }).count();
+    if readable_count == 0 {
+        eprintln!("✗ Cannot read any input devices (permission denied).");
+        eprintln!("  You need to be in the 'input' group. Run:");
+        eprintln!("    sudo usermod -aG input $USER");
+        eprintln!("  Then log out and back in.");
+        std::process::exit(1);
+    }
+
+    println!("Found {} input device(s).\n", kbd_devices.len());
+
+    // --- Step 1: Capture trigger ---
+    println!("Step 1/2: Press the key or button to use as the TRIGGER...");
+    println!("  (press Ctrl+C to cancel)\n");
 
     let trigger = capture_key(&mut kbd_devices);
-    let trigger_name = key_name(trigger.0);
-    let trigger_is_mouse = is_mouse_button(trigger.0);
-    println!("  Trigger: {} (code {})\n", trigger_name, trigger.0);
+    let trigger_name = key_name(trigger.code);
+    let trigger_is_mouse = is_mouse_button(trigger.code);
+    println!("  Detected: {} (code {}) on {}", trigger_name, trigger.code, trigger.device_name);
 
-    println!("Press the OUTPUT key (the key to repeat), or press the same key for self-repeat...");
+    if !confirm("  Use this as trigger?") {
+        println!("Cancelled.");
+        return;
+    }
+
+    // --- Step 2: Capture output ---
+    println!("\nStep 2/2: Press the key to REPEAT as output (or same key for self-repeat)...");
+    println!("  (press Ctrl+C to cancel)\n");
 
     let output = capture_key(&mut kbd_devices);
-    let output_name = key_name(output.0);
-    let output_is_mouse = is_mouse_button(output.0);
+    let output_name = key_name(output.code);
+    let output_is_mouse = is_mouse_button(output.code);
+    let same_key = output.code == trigger.code;
 
-    let same_key = output.0 == trigger.0;
+    if same_key {
+        println!("  Detected: {} (self-repeat)", trigger_name);
+    } else {
+        println!("  Detected: {} (code {}) on {}", output_name, output.code, output.device_name);
+    }
+
+    if !confirm("  Use this as output?") {
+        println!("Cancelled.");
+        return;
+    }
+
+    // --- Step 3: Mode selection ---
+    println!("\nRepeat mode:");
+    println!("  [1] Repeat while held (default)");
+    println!("  [2] Single press on hold");
+    let mode = read_choice(2, 1);
+    let mode_str = if mode == 1 { "repeat" } else { "single_press" };
+
+    // --- Step 4: Check for duplicates and save ---
+    let mut settings = AppSettings::load();
+
+    if settings.bindings.iter().any(|b| b.trigger_code == trigger.code && b.trigger_is_mouse == trigger_is_mouse) {
+        eprintln!("\n✗ A binding for {} already exists. Remove it first with 'fastrepeat remove'.", trigger_name);
+        std::process::exit(1);
+    }
 
     let binding = KeyBinding {
-        trigger_code: trigger.0,
+        trigger_code: trigger.code,
         trigger_is_mouse,
-        output_code: if same_key { None } else { Some(output.0) },
+        output_code: if same_key { None } else { Some(output.code) },
         output_is_mouse: if same_key { None } else { Some(output_is_mouse) },
-        mode: "repeat".to_string(),
+        mode: mode_str.to_string(),
         display_name: if same_key {
             format!("{} → self", trigger_name)
         } else {
@@ -162,35 +212,81 @@ fn cmd_add() {
         },
     };
 
-    let mut settings = AppSettings::load();
-
-    // Check for duplicate trigger
-    if settings.bindings.iter().any(|b| b.trigger_code == trigger.0 && b.trigger_is_mouse == trigger_is_mouse) {
-        eprintln!("A binding for {} already exists. Remove it first.", trigger_name);
-        std::process::exit(1);
-    }
-
     settings.bindings.push(binding);
     settings.save().expect("Failed to save settings");
-    println!("\n✓ Binding added. Restart the daemon to apply.");
+
+    let mode_label = if mode == 1 { "repeat while held" } else { "single press" };
+    println!("\n✓ Added binding: {} → {} ({})",
+        trigger_name,
+        if same_key { "self".to_string() } else { output_name },
+        mode_label);
+    println!("  Speed: {}ms (use 'fastrepeat speed <ms>' to change)", settings.repeat_interval_ms);
+    println!("  Restart the daemon to apply: fastrepeat run");
 }
 
-fn capture_key(devices: &mut [(std::path::PathBuf, evdev::Device)]) -> (u16, bool) {
-    // Simple blocking capture — read from all devices until we get a key press
+/// Result of a key capture, including which device it came from.
+struct CapturedKey {
+    code: u16,
+    device_name: String,
+}
+
+fn capture_key(devices: &mut [(std::path::PathBuf, evdev::Device)]) -> CapturedKey {
     loop {
-        for (_, device) in devices.iter_mut() {
-            // Non-blocking read
-            if let Ok(events) = device.fetch_events() {
-                for event in events {
-                    if let evdev::InputEventKind::Key(key) = event.kind() {
-                        if event.value() == 1 {
-                            return (key.code(), is_mouse_button(key.code()));
+        for (path, device) in devices.iter_mut() {
+            match device.fetch_events() {
+                Ok(events) => {
+                    for event in events {
+                        if let evdev::InputEventKind::Key(key) = event.kind() {
+                            if event.value() == 1 {
+                                let device_name = device.name()
+                                    .unwrap_or("unknown device")
+                                    .to_string();
+                                return CapturedKey {
+                                    code: key.code(),
+                                    device_name,
+                                };
+                            }
                         }
                     }
+                }
+                Err(e) => {
+                    // Log once per device, not every poll cycle — use debug level
+                    log::debug!("Could not read from {}: {}", path.display(), e);
                 }
             }
         }
         std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
+/// Prompt the user for Y/n confirmation. Returns true on Y/Enter, false on n.
+fn confirm(prompt: &str) -> bool {
+    use std::io::{self, Write};
+    print!("{} [Y/n]: ", prompt);
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap_or(0);
+    let trimmed = input.trim().to_lowercase();
+    trimmed.is_empty() || trimmed == "y" || trimmed == "yes"
+}
+
+/// Prompt the user to choose 1..=max, with a default.
+fn read_choice(max: u32, default: u32) -> u32 {
+    use std::io::{self, Write};
+    print!("Choice [{}]: ", default);
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap_or(0);
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return default;
+    }
+    match trimmed.parse::<u32>() {
+        Ok(n) if n >= 1 && n <= max => n,
+        _ => {
+            println!("  Invalid choice, using default ({}).", default);
+            default
+        }
     }
 }
 
