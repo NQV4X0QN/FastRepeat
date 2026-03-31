@@ -1,6 +1,6 @@
 [package]
 name = "fastrepeat"
-version = "1.6.2"
+version = "1.7.0"
 edition = "2021"
 authors = ["NQV4X0QN"]
 description = "System-wide key and mouse button repeater for Linux"
