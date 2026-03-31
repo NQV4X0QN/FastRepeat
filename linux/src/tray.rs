@@ -148,7 +148,9 @@ pub fn start_tray(is_enabled: bool) -> (
         tx,
     };
 
-    let handle = ksni::spawn(tray).expect("Failed to create system tray");
+    let service = ksni::TrayService::new(tray);
+    let handle = service.handle();
+    service.spawn();
 
     (rx, state, handle)
 }
