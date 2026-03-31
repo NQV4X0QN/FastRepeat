@@ -274,7 +274,7 @@ fn build_ui(app: &adw::Application) {
 
     // ── System tray ───────────────────────────────────────────────
     let initial_enabled = settings.borrow().is_enabled;
-    let (tray_rx, tray_state, _tray_handle) = tray::start_tray(initial_enabled);
+    let (tray_rx, tray_state) = tray::start_tray(initial_enabled);
 
     // When window close is requested, hide instead of destroy (tray keeps running)
     window.connect_close_request(move |win| {

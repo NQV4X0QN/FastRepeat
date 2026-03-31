@@ -138,7 +138,6 @@ impl ksni::Tray for FastRepeatTray {
 pub fn start_tray(is_enabled: bool) -> (
     std::sync::mpsc::Receiver<TrayAction>,
     Arc<TrayState>,
-    ksni::Handle<FastRepeatTray>,
 ) {
     let (tx, rx) = std::sync::mpsc::channel();
     let state = Arc::new(TrayState::new(is_enabled));
@@ -149,10 +148,9 @@ pub fn start_tray(is_enabled: bool) -> (
     };
 
     let service = ksni::TrayService::new(tray);
-    let handle = service.handle();
     service.spawn();
 
-    (rx, state, handle)
+    (rx, state)
 }
 
 /// Toggle autostart and update shared state. Returns the new state.
