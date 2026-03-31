@@ -6,7 +6,6 @@ use libadwaita::prelude::*;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use crate::config::{AppSettings, KeyBinding};
 use crate::input::{is_mouse_button, key_name};
@@ -314,28 +313,30 @@ fn show_add_dialog(
     settings: &Rc<RefCell<AppSettings>>,
     list: &gtk::ListBox,
 ) {
-    let dialog = adw::AlertDialog::builder()
-        .heading("Add Key Binding")
-        .body("Key capture requires the CLI.\n\nRun this command in a terminal:\n\n  fastrepeat add\n\nThen restart the GUI to see the new binding.")
+    let dialog = gtk::MessageDialog::builder()
+        .transient_for(window)
+        .modal(true)
+        .message_type(gtk::MessageType::Info)
+        .buttons(gtk::ButtonsType::Ok)
+        .text("Add Key Binding")
+        .secondary_text("Key capture requires the CLI.\n\nRun this command in a terminal:\n\n  fastrepeat add\n\nThen restart the GUI to see the new binding.")
         .build();
-    dialog.add_response("ok", "OK");
-    dialog.set_default_response(Some("ok"));
-    dialog.present(Some(window));
 
-    // Refresh the list when dialog closes (in case user ran the CLI)
     let s = settings.clone();
     let l = list.clone();
-    dialog.connect_response(None, move |_, _| {
+    dialog.connect_response(move |dlg, _| {
+        dlg.close();
         let reloaded = AppSettings::load();
         *s.borrow_mut() = reloaded;
         populate_bindings_list(&l, &s.borrow());
     });
+    dialog.present();
 }
 
 fn show_set_output_dialog(
     window: &adw::ApplicationWindow,
     settings: &Rc<RefCell<AppSettings>>,
-    list: &gtk::ListBox,
+    _list: &gtk::ListBox,
     index: usize,
 ) {
     let trigger_name = {
@@ -347,14 +348,17 @@ fn show_set_output_dialog(
         }
     };
 
-    let dialog = adw::AlertDialog::builder()
-        .heading("Set Output Key")
-        .body(&format!(
+    let dialog = gtk::MessageDialog::builder()
+        .transient_for(window)
+        .modal(true)
+        .message_type(gtk::MessageType::Info)
+        .buttons(gtk::ButtonsType::Ok)
+        .text("Set Output Key")
+        .secondary_text(&format!(
             "Trigger: {}\n\nTo change the output key, run:\n\n  fastrepeat remove {}\n  fastrepeat add\n\nThen restart the GUI.",
             trigger_name, index
         ))
         .build();
-    dialog.add_response("ok", "OK");
-    dialog.set_default_response(Some("ok"));
-    dialog.present(Some(window));
+    dialog.connect_response(|dlg, _| dlg.close());
+    dialog.present();
 }
