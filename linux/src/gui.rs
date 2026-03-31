@@ -21,6 +21,11 @@ pub fn run_gui() {
 }
 
 fn build_ui(app: &adw::Application) {
+    // Use AdwStyleManager for theme preference instead of the deprecated
+    // GtkSettings:gtk-application-prefer-dark-theme (suppresses the warning)
+    let style_manager = adw::StyleManager::default();
+    style_manager.set_color_scheme(adw::ColorScheme::Default);
+
     let settings = Rc::new(RefCell::new(AppSettings::load()));
 
     // Main window
