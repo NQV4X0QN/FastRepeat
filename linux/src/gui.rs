@@ -130,11 +130,15 @@ fn build_ui(app: &adw::Application) {
     speed_group.add(&speed_row);
 
     // Lock speed row
-    let lock_row = adw::SwitchRow::builder()
+    let lock_row = adw::ActionRow::builder()
         .title("Lock Speed")
         .subtitle("Prevent accidental speed changes")
-        .active(settings.borrow().is_speed_locked)
         .build();
+    let lock_switch = gtk::Switch::new();
+    lock_switch.set_active(settings.borrow().is_speed_locked);
+    lock_switch.set_valign(gtk::Align::Center);
+    lock_row.add_suffix(&lock_switch);
+    lock_row.set_activatable_widget(Some(&lock_switch));
 
     speed_group.add(&lock_row);
     body.append(&speed_group);
@@ -165,9 +169,9 @@ fn build_ui(app: &adw::Application) {
     // Speed slider
     {
         let s = settings.clone();
-        let lock = lock_row.clone();
+        let lock_sw = lock_switch.clone();
         speed_adj.connect_value_changed(move |adj| {
-            if !lock.is_active() {
+            if !lock_sw.is_active() {
                 s.borrow_mut().repeat_interval_ms = adj.value() as u64;
                 let _ = s.borrow().save();
             }
@@ -179,12 +183,12 @@ fn build_ui(app: &adw::Application) {
         let s = settings.clone();
         let scale = speed_scale.clone();
         let spin = speed_spin.clone();
-        lock_row.connect_active_notify(move |row| {
-            let locked = row.is_active();
+        lock_switch.connect_state_set(move |_, locked| {
             s.borrow_mut().is_speed_locked = locked;
             let _ = s.borrow().save();
             scale.set_sensitive(!locked);
             spin.set_sensitive(!locked);
+            glib::Propagation::Proceed
         });
         // Initial state
         speed_scale.set_sensitive(!settings.borrow().is_speed_locked);
