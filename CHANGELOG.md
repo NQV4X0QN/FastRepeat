@@ -7,6 +7,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 
+## [1.7.6] — 2026-03-31
+
+### Fixed (Linux)
+- **AppImage first-run setup loop** — the input group dialog no longer blocks the app
+  from launching. Key changes:
+  - Setup prompt only shown **once** — tracked with a flag file at
+    `~/.config/fastrepeat/.appimage-setup-done`
+  - "Skip — try running anyway" option always available (app handles permission
+    errors gracefully in the GUI capture dialogs)
+  - After group add, checks `/etc/group` to verify the change persisted — shows
+    specific guidance for immutable distros (Bazzite, Fedora Atomic) if it didn't
+  - App always launches after the dialog, even before re-login — any permission
+    issues surface as clear error messages in the capture dialogs
+  - Also tests `/dev/input/event*` readability directly, not just group membership
+    (works with custom udev rules)
+
+
 ## [1.7.5] — 2026-03-31
 
 ### Added (Linux)

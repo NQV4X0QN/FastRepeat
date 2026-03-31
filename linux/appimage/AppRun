@@ -1,93 +1,151 @@
 #!/usr/bin/env bash
 # AppRun — entry point for the FastRepeat AppImage
-# Handles first-run input group setup, then launches the binary.
+# Handles first-run input group check, then launches the binary.
 
 set -euo pipefail
 
 APPDIR="$(dirname "$(readlink -f "$0")")"
 BINARY="$APPDIR/usr/bin/fastrepeat"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/fastrepeat"
+SETUP_DONE_FLAG="$CONFIG_DIR/.appimage-setup-done"
 
 # ─── Input group check ─────────────────────────────────────────────
-# FastRepeat needs read access to /dev/input/* (evdev) and write access
-# to /dev/uinput. Both require membership in the 'input' group.
 
 check_input_group() {
-    if id -nG "$USER" | grep -qw input; then
-        return 0  # already in the group
-    fi
+    id -nG "$USER" 2>/dev/null | grep -qw input
+}
+
+can_read_input_devices() {
+    # Actually test if we can read any /dev/input/event* device
+    for dev in /dev/input/event*; do
+        if [ -r "$dev" ] 2>/dev/null; then
+            return 0
+        fi
+    done
     return 1
 }
 
-prompt_group_add() {
-    # Try zenity first (GNOME), fall back to kdialog (KDE), then terminal
+first_run_setup() {
+    # Skip if we've already been through setup
+    if [ -f "$SETUP_DONE_FLAG" ]; then
+        return
+    fi
+
+    # Skip if user already has access (either via group or udev rules)
+    if check_input_group || can_read_input_devices; then
+        mkdir -p "$CONFIG_DIR"
+        touch "$SETUP_DONE_FLAG"
+        return
+    fi
+
+    # Show the first-run dialog
     if command -v zenity &>/dev/null; then
-        zenity --question \
+        local choice
+        choice=$(zenity --list \
             --title="Fast Repeat — First Run Setup" \
-            --text="Fast Repeat needs access to input devices.\n\nThis requires adding your user to the <b>input</b> group (one-time setup).\nYou'll need to <b>log out and back in</b> afterward.\n\nAdd yourself to the input group now?" \
-            --ok-label="Yes, add me" \
-            --cancel-label="Not now" \
-            --width=420 2>/dev/null
-        return $?
+            --text="Fast Repeat needs access to input devices to detect key presses.\n\nOn most systems this requires being in the <b>input</b> group.\nYou can add yourself now, or skip and try running anyway." \
+            --radiolist \
+            --column="" --column="Option" \
+            TRUE "Add me to the input group (requires password)" \
+            FALSE "Skip — try running anyway" \
+            --width=500 --height=250 2>/dev/null) || choice="skip"
+
+        case "$choice" in
+            *"Add me"*)
+                do_group_add
+                ;;
+        esac
     elif command -v kdialog &>/dev/null; then
-        kdialog --yesno "Fast Repeat needs access to input devices.\n\nThis requires adding your user to the 'input' group (one-time setup).\nYou'll need to log out and back in afterward.\n\nAdd yourself to the input group now?" \
-            --title "Fast Repeat — First Run Setup" 2>/dev/null
-        return $?
+        if kdialog --yesno "Fast Repeat needs access to input devices.\n\nThis usually requires being in the 'input' group.\nAdd yourself now? (You can skip and try anyway.)" \
+            --title "Fast Repeat — First Run Setup" \
+            --yes-label "Add me" --no-label "Skip" 2>/dev/null; then
+            do_group_add
+        fi
     else
         echo ""
         echo "Fast Repeat — First Run Setup"
         echo ""
         echo "FastRepeat needs access to input devices."
-        echo "This requires adding your user to the 'input' group."
+        echo "This usually requires being in the 'input' group."
         echo ""
-        read -rp "Add yourself to the input group now? [Y/n]: " answer
+        read -rp "Add yourself to the input group? [Y/n]: " answer
         case "$answer" in
-            [nN]*) return 1 ;;
-            *) return 0 ;;
+            [nN]*) ;;
+            *) do_group_add ;;
         esac
     fi
+
+    # Mark setup as done regardless of outcome — don't loop
+    mkdir -p "$CONFIG_DIR"
+    touch "$SETUP_DONE_FLAG"
 }
 
 do_group_add() {
-    # pkexec provides a graphical password prompt (polkit)
+    local success=false
+
     if command -v pkexec &>/dev/null; then
-        pkexec usermod -aG input "$USER"
+        if pkexec usermod -aG input "$USER" 2>/dev/null; then
+            success=true
+        fi
     else
-        # Fallback: terminal sudo
         echo "Enter your password to add yourself to the 'input' group:"
-        sudo usermod -aG input "$USER"
+        if sudo usermod -aG input "$USER" 2>/dev/null; then
+            success=true
+        fi
+    fi
+
+    if [ "$success" = true ]; then
+        # Verify the change actually took effect in /etc/group
+        if grep -q "input.*$USER" /etc/group 2>/dev/null; then
+            show_logout_notice
+        else
+            show_immutable_notice
+        fi
+    else
+        show_failed_notice
     fi
 }
 
 show_logout_notice() {
+    local msg="You've been added to the input group.\n\nPlease log out and back in for the change to take effect.\nFast Repeat will now try to launch — if input doesn't work yet, restart after re-login."
     if command -v zenity &>/dev/null; then
-        zenity --info \
-            --title="Fast Repeat" \
-            --text="You've been added to the <b>input</b> group.\n\n<b>Please log out and back in</b> for the change to take effect, then run Fast Repeat again." \
-            --width=380 2>/dev/null
+        zenity --info --title="Fast Repeat" --text="$msg" --width=420 2>/dev/null
     elif command -v kdialog &>/dev/null; then
-        kdialog --msgbox "You've been added to the 'input' group.\n\nPlease log out and back in for the change to take effect, then run Fast Repeat again." \
-            --title "Fast Repeat" 2>/dev/null
+        kdialog --msgbox "$msg" --title "Fast Repeat" 2>/dev/null
     else
         echo ""
         echo "✓ Added to 'input' group."
         echo "  Please log out and back in, then run Fast Repeat again."
+        echo "  Attempting to launch now anyway..."
         echo ""
     fi
 }
 
-show_skip_notice() {
+show_immutable_notice() {
+    local msg="The group change may not have persisted (common on immutable distros like Bazzite).\n\nTry running this in a terminal instead:\n  sudo usermod -aG input \$USER\n\nThen log out and back in."
     if command -v zenity &>/dev/null; then
-        zenity --warning \
-            --title="Fast Repeat" \
-            --text="Fast Repeat may not work without input group access.\n\nTo fix later, run:\n  <tt>sudo usermod -aG input $USER</tt>\nThen log out and back in." \
-            --width=380 2>/dev/null
+        zenity --warning --title="Fast Repeat" --text="$msg" --width=420 2>/dev/null
     elif command -v kdialog &>/dev/null; then
-        kdialog --sorry "Fast Repeat may not work without input group access.\n\nTo fix later, run:\n  sudo usermod -aG input \$USER\nThen log out and back in." \
-            --title "Fast Repeat" 2>/dev/null
+        kdialog --sorry "$msg" --title "Fast Repeat" 2>/dev/null
     else
         echo ""
-        echo "⚠ Fast Repeat may not work without input group access."
-        echo "  To fix later: sudo usermod -aG input \$USER"
+        echo "⚠ Group change may not have persisted."
+        echo "  Try: sudo usermod -aG input \$USER"
+        echo "  Then log out and back in."
+        echo ""
+    fi
+}
+
+show_failed_notice() {
+    local msg="Could not add you to the input group.\n\nTry running this in a terminal:\n  sudo usermod -aG input \$USER\n\nThen log out and back in."
+    if command -v zenity &>/dev/null; then
+        zenity --warning --title="Fast Repeat" --text="$msg" --width=380 2>/dev/null
+    elif command -v kdialog &>/dev/null; then
+        kdialog --sorry "$msg" --title "Fast Repeat" 2>/dev/null
+    else
+        echo ""
+        echo "✗ Could not add to 'input' group."
+        echo "  Try: sudo usermod -aG input \$USER"
         echo "  Then log out and back in."
         echo ""
     fi
@@ -95,19 +153,7 @@ show_skip_notice() {
 
 # ─── Main ───────────────────────────────────────────────────────────
 
-if ! check_input_group; then
-    if prompt_group_add; then
-        if do_group_add; then
-            show_logout_notice
-            exit 0
-        else
-            echo "Failed to add to input group." >&2
-            show_skip_notice
-        fi
-    else
-        show_skip_notice
-    fi
-fi
+first_run_setup
 
-# Launch the app, passing through all arguments
+# Always try to launch — the app handles permission errors gracefully
 exec "$BINARY" "$@"
